@@ -32,6 +32,7 @@ class ChainwayRfidModule(context: ReactApplicationContext) : NativeChainwayRfidS
     private const val BANK_EPC = 1
     private const val EPC_START_BIT = 32
     private const val TAG_FLUSH_MS = 150L
+    private const val POST_CONNECT_DELAY_MS = 800L
 
     const val EVT_DEVICE_FOUND = "ChainwayRfid.deviceFound"
     const val EVT_CONNECTION = "ChainwayRfid.connection"
@@ -159,7 +160,8 @@ class ChainwayRfidModule(context: ReactApplicationContext) : NativeChainwayRfidS
           val name = statusName(status)
           debug("rx", "connectionStatus", name)
           if (status == ConnectionStatus.CONNECTED) {
-            commands.execute { runCatching { uhf.setBarcodeTypeInSSIID(true) } }
+            // The R6 ignores commands sent in the first moments after the link comes up.
+            scheduler.schedule({ commands.execute { enableBarcodeSymbology() } }, POST_CONNECT_DELAY_MS, TimeUnit.MILLISECONDS)
           }
           val map = Arguments.createMap()
           map.putString("status", name)
@@ -167,6 +169,16 @@ class ChainwayRfidModule(context: ReactApplicationContext) : NativeChainwayRfidS
           emit(EVT_CONNECTION, map)
         }
       })
+    }
+  }
+
+  /** Makes barcode results carry the SSI symbology id; retried because the reader may still be busy. */
+  private fun enableBarcodeSymbology() {
+    for (attempt in 1..3) {
+      val ok = runCatching { uhf.setBarcodeTypeInSSIID(true) }.getOrDefault(false)
+      debug(if (ok) "rx" else "err", "setBarcodeTypeInSSIID", "attempt $attempt -> $ok")
+      if (ok) return
+      Thread.sleep(POST_CONNECT_DELAY_MS)
     }
   }
 

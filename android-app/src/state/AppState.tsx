@@ -25,6 +25,7 @@ import {
   ScanItem,
   Settings,
 } from '../types';
+import { inferSymbology, normalizeRssi } from '../utils/codes';
 import { uuid } from '../utils/ids';
 
 interface Connection {
@@ -60,6 +61,65 @@ type Action =
 
 const HISTORY_LIMIT = 30;
 
+const POST_CONNECT_DELAY_MS = 1000;
+const POST_CONNECT_ATTEMPTS = 3;
+
+const sleep = (ms: number) =>
+  new Promise<void>(resolve => setTimeout(resolve, ms));
+
+/** The SDK reports -1 / '' for values it could not read. */
+function normalizeReaderInfo(info: ReaderInfo): ReaderInfo {
+  const out: ReaderInfo = {};
+  for (const [key, val] of Object.entries(info) as [
+    keyof ReaderInfo,
+    unknown,
+  ][]) {
+    if (val !== -1 && val !== '' && val !== null && val !== undefined) {
+      (out as Record<string, unknown>)[key] = val;
+    }
+  }
+  return out;
+}
+
+/**
+ * The R6 rejects commands sent right after the BLE link comes up (field log:
+ * setEPCAndTIDMode=false, all reader info -1). Wait, then retry until it answers.
+ */
+async function setupAfterConnect(
+  isCancelled: () => boolean,
+  includeTid: boolean,
+  onInfo: (info: ReaderInfo) => void,
+) {
+  let modeOk = false;
+  let infoOk = false;
+  for (
+    let attempt = 1;
+    attempt <= POST_CONNECT_ATTEMPTS && !(modeOk && infoOk);
+    attempt++
+  ) {
+    await sleep(POST_CONNECT_DELAY_MS * attempt);
+    if (isCancelled()) {
+      return;
+    }
+    if (!modeOk) {
+      modeOk = await reader.setInventoryMode(includeTid).catch(() => false);
+    }
+    if (!infoOk) {
+      const info = normalizeReaderInfo(
+        await reader.getReaderInfo().catch(() => ({})),
+      );
+      infoOk = info.battery !== undefined || info.version !== undefined;
+      onInfo(info);
+    }
+  }
+  if (!modeOk || !infoOk) {
+    debugLog.log('app', 'err', 'Configuração pós-conexão incompleta', {
+      inventoryModeApplied: modeOk,
+      readerInfoRead: infoOk,
+    });
+  }
+}
+
 function emptyBatch(): ScanBatch {
   return {
     id: uuid(),
@@ -82,7 +142,10 @@ function mergeKey(item: ScanItem): string | null {
     : null;
 }
 
-export function mergeItems(existing: ScanItem[], incoming: ScanItem[]): ScanItem[] {
+export function mergeItems(
+  existing: ScanItem[],
+  incoming: ScanItem[],
+): ScanItem[] {
   const result = [...existing];
   const index = new Map<string, number>();
   result.forEach((it, i) => {
@@ -196,7 +259,7 @@ export function tagToItem(
     epc: tag.epc,
     tid: tag.tid || undefined,
     userData: tag.user || undefined,
-    rssi: tag.rssi || undefined,
+    rssi: normalizeRssi(tag.rssi),
     readCount: Math.max(1, tag.count || 1),
     capturedAt: new Date(tag.timestamp || Date.now()).toISOString(),
     raw: { ...tag, ...extra },
@@ -204,12 +267,13 @@ export function tagToItem(
 }
 
 export function barcodeToItem(code: BarcodeRead): ScanItem {
+  const symbology = code.symbology || inferSymbology(code.value);
   return {
     id: uuid(),
-    captureType: isQrSymbology(code.symbology) ? 'qr' : 'barcode',
+    captureType: isQrSymbology(symbology) ? 'qr' : 'barcode',
     operation: 'read',
     barcodeValue: code.value,
-    symbology: code.symbology,
+    symbology,
     readCount: 1,
     capturedAt: new Date().toISOString(),
     raw: { ...code },
@@ -285,27 +349,38 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
 
   const refreshReaderInfo = useCallback(async () => {
     try {
-      dispatch({ type: 'readerInfo', info: await reader.getReaderInfo() });
+      dispatch({
+        type: 'readerInfo',
+        info: normalizeReaderInfo(await reader.getReaderInfo()),
+      });
     } catch (e) {
       debugLog.log('app', 'err', 'getReaderInfo', String(e));
     }
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
     const sub = reader.onConnection(evt => {
       dispatch({
         type: 'connection',
         connection: { status: evt.status, address: evt.address },
       });
       if (evt.status === 'connected') {
-        reader
-          .setInventoryMode(stateRef.current.settings.includeTid)
-          .catch(() => undefined);
-        refreshReaderInfo();
+        cancelled = false;
+        setupAfterConnect(
+          () => cancelled,
+          stateRef.current.settings.includeTid,
+          info => dispatch({ type: 'readerInfo', info }),
+        );
+      } else {
+        cancelled = true;
       }
     });
-    return () => sub.remove();
-  }, [refreshReaderInfo]);
+    return () => {
+      cancelled = true;
+      sub.remove();
+    };
+  }, []);
 
   const sendBatch = useCallback(async () => {
     const { batch, settings, connection } = stateRef.current;
@@ -336,22 +411,26 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const value = useMemo<AppContextValue>(
+  // Stable identities: screens subscribe to reader events with these in effect deps.
+  const actions = useMemo(
     () => ({
-      ...state,
-      updateSettings: patch => dispatch({ type: 'settings', patch }),
-      addItems: items => {
+      updateSettings: (patch: Partial<Settings>) =>
+        dispatch({ type: 'settings', patch }),
+      addItems: (items: ScanItem[]) => {
         if (items.length) {
           dispatch({ type: 'addItems', items });
         }
       },
-      removeItem: id => dispatch({ type: 'removeItem', id }),
-      setNotes: notes => dispatch({ type: 'notes', notes }),
+      removeItem: (id: string) => dispatch({ type: 'removeItem', id }),
+      setNotes: (notes: string) => dispatch({ type: 'notes', notes }),
       newBatch: () => dispatch({ type: 'newBatch' }),
-      sendBatch,
-      refreshReaderInfo,
     }),
-    [state, sendBatch, refreshReaderInfo],
+    [],
+  );
+
+  const value = useMemo<AppContextValue>(
+    () => ({ ...state, ...actions, sendBatch, refreshReaderInfo }),
+    [state, actions, sendBatch, refreshReaderInfo],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

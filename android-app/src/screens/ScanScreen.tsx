@@ -74,13 +74,19 @@ export function ScanScreen() {
     const tags = reader.onTags(list =>
       addItems(list.filter(t => t.epc).map(t => tagToItem(t))),
     );
-    return () => {
-      tags.remove();
+    return () => tags.remove();
+  }, [addItems]);
+
+  // Stop the radio only when leaving the screen, never on re-subscription.
+  useEffect(
+    () => () => {
       if (inventoryRef.current) {
+        inventoryRef.current = false;
         reader.stopInventory().catch(() => undefined);
       }
-    };
-  }, [addItems]);
+    },
+    [],
+  );
 
   // Physical trigger on the R6: RFID mode toggles inventory, barcode mode fires the imager.
   useEffect(() => {

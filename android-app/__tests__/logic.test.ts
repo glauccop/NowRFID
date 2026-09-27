@@ -64,7 +64,7 @@ describe('batch merge', () => {
     expect(items).toHaveLength(2);
     const a = items.find(i => i.epc === 'AAAA')!;
     expect(a.readCount).toBe(5);
-    expect(a.rssi).toBe('-45');
+    expect(a.rssi).toBe('-45.0');
   });
 
   it('keeps written tags as separate entries from reads of the same EPC', () => {

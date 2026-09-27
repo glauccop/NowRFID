@@ -16,10 +16,20 @@ jest.mock('@react-native-async-storage/async-storage', () => {
 });
 
 // The Chainway reader only exists on the Android device; every native call resolves true in tests.
-jest.mock('./specs/NativeChainwayRfid', () => ({
-  __esModule: true,
-  default: new Proxy({}, { get: () => jest.fn(() => Promise.resolve(true)) }),
-}));
+// One cached jest.fn per method so tests can assert on calls.
+jest.mock('./specs/NativeChainwayRfid', () => {
+  const fns = {};
+  return {
+    __esModule: true,
+    default: new Proxy(
+      {},
+      {
+        get: (_, name) =>
+          (fns[name] = fns[name] || jest.fn(() => Promise.resolve(true))),
+      },
+    ),
+  };
+});
 
 jest.mock(
   'react-native-safe-area-context',
