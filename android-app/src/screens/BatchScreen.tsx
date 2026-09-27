@@ -1,14 +1,16 @@
+import { History, Inbox, Layers, List, Send } from 'lucide-react-native';
+import { useToast } from '../ui/toast';
 import React, { useState } from 'react';
 import { Alert, Text, View } from 'react-native';
 import { useApp } from '../state/AppState';
 import {
+  EmptyState,
   Badge,
   Button,
   Card,
   colors,
   Field,
   KeyValue,
-  Muted,
   Screen,
   styles,
 } from '../ui/components';
@@ -25,6 +27,7 @@ export function BatchScreen() {
     sendBatch,
   } = useApp();
   const [showHistory, setShowHistory] = useState(false);
+  const toast = useToast();
   const sending = batch.status === 'sending';
   const reads = batch.items.filter(i => i.operation === 'read').length;
   const writes = batch.items.length - reads;
@@ -38,7 +41,7 @@ export function BatchScreen() {
     }
     try {
       await sendBatch();
-      Alert.alert('Enviar lote', 'Lote enviado ao ServiceNow.');
+      toast('Lote enviado ao ServiceNow');
     } catch (e) {
       Alert.alert(
         'Falha no envio',
@@ -66,6 +69,7 @@ export function BatchScreen() {
     <Screen>
       <Card
         title="Lote atual"
+        icon={Layers}
         right={<Badge text={batch.status.toUpperCase()} color={statusColor} />}
       >
         <KeyValue
@@ -90,6 +94,7 @@ export function BatchScreen() {
         <View style={styles.wrap}>
           <Button
             title="Enviar ao ServiceNow"
+            icon={Send}
             variant="success"
             busy={sending}
             disabled={!batch.items.length}
@@ -104,9 +109,13 @@ export function BatchScreen() {
         </View>
       </Card>
 
-      <Card title="Itens">
+      <Card title="Itens" icon={List}>
         {batch.items.length === 0 && (
-          <Muted>Lote vazio. Use as abas Escanear ou Gravar.</Muted>
+          <EmptyState
+            icon={Inbox}
+            title="Lote vazio"
+            message="Os itens escaneados ou gravados aparecem aqui até o envio."
+          />
         )}
         {batch.items.map(item => (
           <ItemRow
@@ -119,6 +128,7 @@ export function BatchScreen() {
 
       <Card
         title={`Enviados (${history.length})`}
+        icon={History}
         right={
           <Button
             title={showHistory ? 'Ocultar' : 'Mostrar'}

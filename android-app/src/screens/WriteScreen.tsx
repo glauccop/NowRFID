@@ -1,3 +1,4 @@
+import { useToast } from '../ui/toast';
 import React, { useEffect, useState } from 'react';
 import { Alert, Text } from 'react-native';
 import { Bank, LockBank, LockMode, reader, TagRead } from '../reader/chainway';
@@ -23,6 +24,7 @@ import {
 /** "Tag sendo criada": read the target tag, write a new EPC (and optional USER data), verify, add to batch. */
 export function WriteScreen() {
   const { connection, addItems, captureContext, assetTypes } = useApp();
+  const toast = useToast();
   const contextType = assetTypes.find(
     t => t.sys_id === captureContext?.assetType,
   );
@@ -143,6 +145,12 @@ export function WriteScreen() {
         ),
       ]);
       note('Adicionada ao lote como GRAVADA.');
+      toast(
+        verified
+          ? 'Etiqueta gravada e verificada'
+          : 'Etiqueta gravada (sem confirmação)',
+        verified ? 'positive' : 'info',
+      );
       setTarget(null);
       setNewEpc('');
       setAssetRef('');

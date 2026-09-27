@@ -1,7 +1,20 @@
-import React, { useEffect, useState } from 'react';
 import {
-  Image,
+  ArrowLeft,
+  Bluetooth,
+  BluetoothOff,
+  Bug,
+  Layers,
+  type LucideIcon,
+  PenLine,
+  ScanLine,
+  Settings as SettingsIcon,
+  Wrench,
+} from 'lucide-react-native';
+import React, { useMemo, useState } from 'react';
+import {
   ActivityIndicator,
+  BackHandler,
+  Image,
   Pressable,
   StatusBar,
   StyleSheet,
@@ -18,87 +31,213 @@ import { SettingsScreen } from './src/screens/SettingsScreen';
 import { ToolsScreen } from './src/screens/ToolsScreen';
 import { WriteScreen } from './src/screens/WriteScreen';
 import { AppStateProvider, useApp } from './src/state/AppState';
-import { colors } from './src/ui/components';
+import { NavContext, StackScreen } from './src/ui/nav';
+import { color, font, fontSize, palette, space, touch } from './src/ui/theme';
+import { ToastProvider } from './src/ui/toast';
 
 installReaderDebugTap();
 
-type Tab =
-  | 'connect'
-  | 'scan'
-  | 'write'
-  | 'tools'
-  | 'batch'
-  | 'settings'
-  | 'debug';
+type Tab = 'scan' | 'write' | 'batch' | 'tools' | 'settings';
 
-const TABS: { key: Tab; label: string; Screen: React.ComponentType }[] = [
-  { key: 'connect', label: 'Conectar', Screen: ConnectScreen },
-  { key: 'scan', label: 'Escanear', Screen: ScanScreen },
-  { key: 'write', label: 'Gravar', Screen: WriteScreen },
-  { key: 'tools', label: 'Ferram.', Screen: ToolsScreen },
-  { key: 'batch', label: 'Lote', Screen: BatchScreen },
-  { key: 'settings', label: 'Config', Screen: SettingsScreen },
-  { key: 'debug', label: 'Debug', Screen: DebugScreen },
+// Horizon: at most five destinations in the navigation bar.
+const TABS: {
+  key: Tab;
+  label: string;
+  title: string;
+  icon: LucideIcon;
+  Screen: React.ComponentType;
+}[] = [
+  {
+    key: 'scan',
+    label: 'Escanear',
+    title: 'Escanear bens',
+    icon: ScanLine,
+    Screen: ScanScreen,
+  },
+  {
+    key: 'write',
+    label: 'Gravar',
+    title: 'Gravar etiqueta',
+    icon: PenLine,
+    Screen: WriteScreen,
+  },
+  {
+    key: 'batch',
+    label: 'Lote',
+    title: 'Lote atual',
+    icon: Layers,
+    Screen: BatchScreen,
+  },
+  {
+    key: 'tools',
+    label: 'Ferramentas',
+    title: 'Ferramentas de tag',
+    icon: Wrench,
+    Screen: ToolsScreen,
+  },
+  {
+    key: 'settings',
+    label: 'Ajustes',
+    title: 'Ajustes',
+    icon: SettingsIcon,
+    Screen: SettingsScreen,
+  },
 ];
 
-function Shell() {
-  const { ready, settings, connection, batch } = useApp();
-  const [tab, setTab] = useState<Tab>('connect');
-  const tabs = TABS.filter(t => t.key !== 'debug' || settings.debugEnabled);
+const STACK: Record<
+  StackScreen,
+  { title: string; Screen: React.ComponentType }
+> = {
+  connect: { title: 'Leitor RFID', Screen: ConnectScreen },
+  debug: { title: 'Console de debug', Screen: DebugScreen },
+};
 
-  useEffect(() => {
-    if (tab === 'debug' && !settings.debugEnabled) {
-      setTab('settings');
-    }
-  }, [tab, settings.debugEnabled]);
+function ReaderChip({ onPress }: { onPress: () => void }) {
+  const { connection, readerInfo } = useApp();
+  const connected = connection.status === 'connected';
+  const label = connected
+    ? readerInfo.battery !== undefined
+      ? `R6 · ${readerInfo.battery}%`
+      : 'R6 conectado'
+    : connection.status === 'connecting'
+    ? 'Conectando…'
+    : 'Conectar leitor';
+  const Icon = connected ? Bluetooth : BluetoothOff;
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`Leitor: ${label}`}
+      style={({ pressed }) => [
+        styles.chip,
+        connected ? styles.chipOn : styles.chipOff,
+        pressed && styles.pressed,
+      ]}
+    >
+      <Icon
+        size={16}
+        color={connected ? palette.logoGreen : palette.neutral0}
+      />
+      <Text style={styles.chipText}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function Shell() {
+  const { ready, settings, batch } = useApp();
+  const [tab, setTab] = useState<Tab>('scan');
+  const [stack, setStack] = useState<StackScreen[]>([]);
+
+  const nav = useMemo(
+    () => ({
+      push: (screen: StackScreen) => setStack(s => [...s, screen]),
+      pop: () => setStack(s => s.slice(0, -1)),
+    }),
+    [],
+  );
+
+  React.useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (stack.length) {
+        nav.pop();
+        return true;
+      }
+      return false;
+    });
+    return () => sub.remove();
+  }, [stack.length, nav]);
 
   if (!ready) {
-    return <ActivityIndicator style={styles.flex} />;
+    return <ActivityIndicator style={styles.flex} color={color.primary} />;
   }
-  const Active = TABS.find(t => t.key === tab)!.Screen;
-  const dot =
-    connection.status === 'connected'
-      ? colors.success
-      : connection.status === 'connecting'
-      ? colors.warning
-      : colors.danger;
+
+  const top = stack[stack.length - 1];
+  const current = TABS.find(t => t.key === tab)!;
+  const Active = top ? STACK[top].Screen : current.Screen;
+  const title = top ? STACK[top].title : current.title;
 
   return (
-    <SafeAreaView style={styles.flex} edges={['top', 'bottom']}>
-      <View style={styles.header}>
-        <View style={styles.brand}>
-          <Image
-            source={require('./src/assets/logo-mark.png')}
-            style={styles.logo}
-            accessibilityLabel="NowRFID"
-          />
-          <Text style={styles.headerTitle}>NowRFID</Text>
-        </View>
-        <View style={styles.headerRight}>
-          <Text style={styles.headerText}>{batch.items.length} no lote</Text>
-          <View style={[styles.dot, { backgroundColor: dot }]} />
-        </View>
-      </View>
-      <View style={styles.flex}>
-        <Active />
-      </View>
-      <View style={styles.tabBar}>
-        {tabs.map(t => (
-          <Pressable
-            key={t.key}
-            onPress={() => setTab(t.key)}
-            style={[styles.tab, tab === t.key && styles.tabActive]}
-          >
-            <Text
-              style={[styles.tabText, tab === t.key && styles.tabTextActive]}
-              numberOfLines={1}
+    <NavContext.Provider value={nav}>
+      <SafeAreaView style={styles.flex} edges={['top', 'bottom']}>
+        <View style={styles.header}>
+          {top ? (
+            <Pressable
+              onPress={nav.pop}
+              accessibilityRole="button"
+              accessibilityLabel="Voltar"
+              style={styles.back}
             >
-              {t.label}
+              <ArrowLeft size={22} color={color.headerText} />
+            </Pressable>
+          ) : (
+            <Image
+              source={require('./src/assets/logo-mark.png')}
+              style={styles.logo}
+              accessibilityLabel="NowRFID"
+            />
+          )}
+          <View style={styles.titles}>
+            <Text style={styles.appName}>NowRFID</Text>
+            <Text style={styles.headerTitle} numberOfLines={1}>
+              {title}
             </Text>
-          </Pressable>
-        ))}
-      </View>
-    </SafeAreaView>
+          </View>
+          {!top && settings.debugEnabled && (
+            <Pressable
+              onPress={() => nav.push('debug')}
+              accessibilityRole="button"
+              accessibilityLabel="Abrir console de debug"
+              style={styles.back}
+            >
+              <Bug size={20} color={palette.neutral3} />
+            </Pressable>
+          )}
+          {!top && <ReaderChip onPress={() => nav.push('connect')} />}
+        </View>
+
+        <View style={styles.flex}>
+          <Active />
+        </View>
+
+        {!top && (
+          <View style={styles.tabBar} accessibilityRole="tablist">
+            {TABS.map(t => {
+              const active = tab === t.key;
+              const tint = active ? color.navSelected : color.textMuted;
+              return (
+                <Pressable
+                  key={t.key}
+                  onPress={() => setTab(t.key)}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={t.label}
+                  style={styles.tab}
+                >
+                  <View
+                    style={[styles.tabIcon, active && styles.tabIconActive]}
+                  >
+                    <t.icon size={22} color={tint} />
+                    {t.key === 'batch' && batch.items.length > 0 && (
+                      <View style={styles.count}>
+                        <Text style={styles.countText}>
+                          {batch.items.length > 99 ? '99+' : batch.items.length}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text
+                    style={[styles.tabText, { color: tint }]}
+                    numberOfLines={1}
+                  >
+                    {t.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
+      </SafeAreaView>
+    </NavContext.Provider>
   );
 }
 
@@ -107,40 +246,99 @@ export default function App() {
     <SafeAreaProvider>
       <StatusBar barStyle="light-content" />
       <AppStateProvider>
-        <Shell />
+        <ToastProvider>
+          <Shell />
+        </ToastProvider>
       </AppStateProvider>
     </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: colors.bg },
+  flex: { flex: 1, backgroundColor: color.background },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: colors.dark,
+    gap: space.sm2,
+    paddingHorizontal: space.sm2,
+    paddingVertical: space.sm,
+    backgroundColor: color.header,
   },
-  brand: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  logo: { width: 32, height: 32 },
-  headerTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '800' },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  headerText: { color: '#C9D1D9', fontSize: 13 },
-  dot: { width: 10, height: 10, borderRadius: 5 },
+  logo: { width: 36, height: 36 },
+  back: {
+    width: touch.min,
+    height: touch.min,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  titles: { flex: 1 },
+  appName: {
+    fontFamily: font.bold,
+    fontSize: fontSize.xs,
+    letterSpacing: 1,
+    color: palette.logoGreen,
+    textTransform: 'uppercase',
+  },
+  headerTitle: {
+    fontFamily: font.bold,
+    fontSize: fontSize.md2,
+    color: color.headerText,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.xs,
+    minHeight: 32,
+    paddingHorizontal: space.sm2,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  chipOn: {
+    borderColor: palette.logoGreen,
+    backgroundColor: 'rgba(98,203,75,0.12)',
+  },
+  chipOff: {
+    borderColor: palette.neutral7,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  chipText: {
+    fontFamily: font.bold,
+    fontSize: fontSize.sm,
+    color: color.headerText,
+  },
+  pressed: { opacity: 0.7 },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: colors.card,
+    backgroundColor: color.surface,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: color.divider,
+    paddingTop: space.xs,
   },
-  tab: { flex: 1, paddingVertical: 12, alignItems: 'center' },
-  tabActive: {
-    borderTopWidth: 3,
-    borderTopColor: colors.primary,
-    paddingTop: 9,
+  tab: {
+    flex: 1,
+    minHeight: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
   },
-  tabText: { fontSize: 11, color: colors.muted, fontWeight: '600' },
-  tabTextActive: { color: colors.primary },
+  tabIcon: {
+    paddingHorizontal: space.md1,
+    paddingVertical: 4,
+    borderRadius: 16,
+  },
+  tabIconActive: { backgroundColor: palette.primary0 },
+  tabText: { fontFamily: font.bold, fontSize: fontSize.xs + 1 },
+  count: {
+    position: 'absolute',
+    top: -2,
+    right: 4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 4,
+    backgroundColor: palette.critical2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  countText: { fontFamily: font.bold, fontSize: 10, color: '#FFFFFF' },
 });

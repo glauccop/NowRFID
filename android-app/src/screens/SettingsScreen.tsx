@@ -1,3 +1,5 @@
+import { Bluetooth, Bug, Cloud } from 'lucide-react-native';
+import { useNav } from '../ui/nav';
 import React, { useState } from 'react';
 import { Text } from 'react-native';
 import { serviceNow } from '../network/serviceNow';
@@ -17,6 +19,7 @@ import {
 
 export function SettingsScreen() {
   const { settings, updateSettings } = useApp();
+  const nav = useNav();
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{
     ok: boolean;
@@ -49,7 +52,7 @@ export function SettingsScreen() {
 
   return (
     <Screen>
-      <Card title="Instância ServiceNow">
+      <Card title="Instância ServiceNow" icon={Cloud}>
         <Field
           label="URL da instância"
           placeholder="https://minhainstancia.service-now.com"
@@ -112,12 +115,29 @@ export function SettingsScreen() {
         <Muted>As credenciais ficam salvas apenas neste aparelho.</Muted>
       </Card>
 
-      <Card title="Diagnóstico">
+      <Card title="Leitor RFID" icon={Bluetooth}>
+        <Button
+          title="Conectar / status do leitor"
+          icon={Bluetooth}
+          variant="secondary"
+          onPress={() => nav.push('connect')}
+        />
+      </Card>
+
+      <Card title="Diagnóstico" icon={Bug}>
         <Toggle
-          label="Modo debug (aba Debug + log de tudo que é transmitido)"
+          label="Modo debug (registra tudo que é transmitido)"
           value={settings.debugEnabled}
           onChange={debugEnabled => updateSettings({ debugEnabled })}
         />
+        {settings.debugEnabled && (
+          <Button
+            title="Abrir console de debug"
+            icon={Bug}
+            variant="secondary"
+            onPress={() => nav.push('debug')}
+          />
+        )}
         <KeyValue k="ID do aparelho" v={settings.installId} />
       </Card>
     </Screen>

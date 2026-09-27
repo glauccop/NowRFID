@@ -1,3 +1,11 @@
+import {
+  Database,
+  MapPin,
+  RefreshCw,
+  ScanLine,
+  Shapes,
+} from 'lucide-react-native';
+import { useToast } from '../ui/toast';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useApp } from '../state/AppState';
@@ -38,6 +46,7 @@ export function PrepareCapture({ onStart }: { onStart: () => void }) {
     captureContext?.assetType ?? CLASSIFY_LATER,
   );
   const [syncing, setSyncing] = useState(false);
+  const toast = useToast();
 
   useEffect(() => {
     if (!tree.byId.has(cursor) && tree.root) {
@@ -56,6 +65,7 @@ export function PrepareCapture({ onStart }: { onStart: () => void }) {
     setSyncing(true);
     try {
       await syncStructure(full);
+      toast('Estrutura sincronizada');
     } catch (e) {
       Alert.alert('Sincronizar', e instanceof Error ? e.message : String(e));
     } finally {
@@ -84,9 +94,11 @@ export function PrepareCapture({ onStart }: { onStart: () => void }) {
     <Screen>
       <Card
         title="Estrutura"
+        icon={Database}
         right={
           <Button
             title={structure ? 'Atualizar' : 'Sincronizar'}
+            icon={RefreshCw}
             variant="secondary"
             busy={syncing}
             onPress={() => sync(!structure)}
@@ -107,7 +119,7 @@ export function PrepareCapture({ onStart }: { onStart: () => void }) {
       </Card>
 
       {structure && (
-        <Card title="1. Local">
+        <Card title="1. Local" icon={MapPin}>
           <View style={styles.wrap}>
             {path.map((node, i) => (
               <Pressable
@@ -141,7 +153,7 @@ export function PrepareCapture({ onStart }: { onStart: () => void }) {
       )}
 
       {structure && (
-        <Card title="2. Tipo de bem">
+        <Card title="2. Tipo de bem" icon={Shapes}>
           <View style={s.grid}>
             {[
               {
@@ -176,6 +188,7 @@ export function PrepareCapture({ onStart }: { onStart: () => void }) {
       {structure && (
         <Button
           title="Iniciar scanner"
+          icon={ScanLine}
           variant="success"
           disabled={!canStart}
           onPress={start}

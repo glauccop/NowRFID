@@ -1,13 +1,15 @@
+import { Barcode, PenLine, QrCode, Radio, Trash2 } from 'lucide-react-native';
 import React from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { useApp } from '../state/AppState';
-import { Pressable, Text, View } from 'react-native';
 import type { ScanItem } from '../types';
-import { Badge, colors, styles } from '../ui/components';
+import { Badge, IconButton } from '../ui/components';
+import { color, font, fontSize, palette, space, tone } from '../ui/theme';
 
-const TYPE_COLOR = {
-  rfid: colors.primary,
-  barcode: colors.warning,
-  qr: colors.success,
+const KIND = {
+  rfid: { icon: Radio, tone: tone.primary, label: 'RFID' },
+  barcode: { icon: Barcode, tone: tone.warning, label: 'Código de barras' },
+  qr: { icon: QrCode, tone: tone.positive, label: 'QR Code' },
 };
 
 export function ItemRow({
@@ -37,36 +39,65 @@ export function ItemRow({
           .filter(Boolean)
           .join(' · ')
       : [item.symbology, `x${item.readCount}`].filter(Boolean).join(' · ');
+  const kind = KIND[item.captureType];
+  const Icon = item.operation === 'write' ? PenLine : kind.icon;
+
   return (
     <View
-      style={[
-        styles.row,
-        { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 6 },
-      ]}
+      style={s.row}
+      accessible
+      accessibilityLabel={`${kind.label} ${main}${
+        item.operation === 'write' ? ', gravada' : ''
+      }`}
     >
-      <View style={styles.flex1}>
-        <Text style={styles.mono} numberOfLines={2}>
+      <View style={[s.leading, { backgroundColor: kind.tone.bg }]}>
+        <Icon size={20} color={kind.tone.fg} />
+      </View>
+      <View style={s.body}>
+        <Text style={s.main} numberOfLines={2}>
           {main}
         </Text>
-        <Text style={styles.muted}>{sub}</Text>
-        {!!where && <Text style={styles.muted}>{where}</Text>}
+        <Text style={s.sub}>{sub}</Text>
+        {!!where && <Text style={s.sub}>{where}</Text>}
       </View>
-      <View style={{ alignItems: 'flex-end', gap: 4 }}>
-        <Badge
-          text={item.captureType.toUpperCase()}
-          color={TYPE_COLOR[item.captureType]}
+      {item.operation === 'write' && <Badge text="GRAVADA" tone="critical" />}
+      {onRemove && (
+        <IconButton
+          icon={Trash2}
+          label="Remover item"
+          tint={palette.critical3}
+          onPress={onRemove}
         />
-        {item.operation === 'write' && (
-          <Badge text="GRAVADA" color={colors.danger} />
-        )}
-        {onRemove && (
-          <Pressable onPress={onRemove} hitSlop={8}>
-            <Text style={{ color: colors.danger, fontWeight: '700' }}>
-              remover
-            </Text>
-          </Pressable>
-        )}
-      </View>
+      )}
     </View>
   );
 }
+
+const s = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm2,
+    paddingVertical: space.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: color.divider,
+  },
+  leading: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  body: { flex: 1, gap: 2 },
+  main: {
+    fontFamily: font.mono,
+    fontSize: fontSize.md,
+    color: color.textPrimary,
+  },
+  sub: {
+    fontFamily: font.regular,
+    fontSize: fontSize.sm,
+    color: color.textTertiary,
+  },
+});

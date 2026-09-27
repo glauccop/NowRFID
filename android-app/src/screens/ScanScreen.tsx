@@ -5,10 +5,27 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { Alert, FlatList, StyleSheet, Text, View } from 'react-native';
+import {
+  MapPin,
+  Pencil,
+  Play,
+  ScanBarcode,
+  ScanLine,
+  Square,
+  Tag,
+} from 'lucide-react-native';
+import {
+  Alert,
+  FlatList,
+  StyleSheet,
+  Text,
+  Vibration,
+  View,
+} from 'react-native';
 import { reader } from '../reader/chainway';
 import { barcodeToItem, tagToItem, useApp } from '../state/AppState';
-import { Button, colors, Muted, Segmented, styles } from '../ui/components';
+import { Button, EmptyState, Fab, Segmented } from '../ui/components';
+import { color, font, fontSize, palette, space } from '../ui/theme';
 import { ItemRow } from './ItemRow';
 import { PrepareCapture } from './PrepareCapture';
 
@@ -73,6 +90,7 @@ export function ScannerView({
     try {
       const code = await reader.scanBarcode();
       if (code?.value) {
+        Vibration.vibrate(30);
         addItems([barcodeToItem(code)]);
       }
     } catch (e) {
@@ -82,10 +100,20 @@ export function ScannerView({
     }
   }, [addItems]);
 
+  // Haptic confirmation only for tags not yet in the batch (re-reads stay silent).
+  const knownEpcs = useRef(new Set<string>());
+  knownEpcs.current = new Set(
+    batch.items.filter(i => i.epc).map(i => i.epc as string),
+  );
+
   useEffect(() => {
-    const tags = reader.onTags(list =>
-      addItems(list.filter(t => t.epc).map(t => tagToItem(t))),
-    );
+    const tags = reader.onTags(list => {
+      const fresh = list.filter(t => t.epc);
+      if (fresh.some(t => !knownEpcs.current.has(t.epc))) {
+        Vibration.vibrate(30);
+      }
+      addItems(fresh.map(t => tagToItem(t)));
+    });
     return () => tags.remove();
   }, [addItems]);
 
@@ -136,18 +164,26 @@ export function ScannerView({
     [batch.items, captureContext],
   );
   const rfidCount = items.filter(i => i.captureType === 'rfid').length;
+  const path =
+    captureContext?.locationPath.slice(1).join(' › ') ||
+    captureContext?.locationPath.join(' › ');
 
   return (
     <View style={s.container}>
       <View style={s.summary}>
-        <View style={styles.flex1}>
-          <Text style={s.summaryPath} numberOfLines={2}>
-            {captureContext?.locationPath.slice(1).join(' › ') ||
-              captureContext?.locationPath.join(' › ')}
-          </Text>
-          <Text style={s.summaryType}>
-            {type ? `${type.icon} ${type.name}` : '❔ Classificar depois'}
-          </Text>
+        <View style={s.summaryText}>
+          <View style={s.line}>
+            <MapPin size={16} color={palette.primary1} />
+            <Text style={s.summaryPath} numberOfLines={2}>
+              {path}
+            </Text>
+          </View>
+          <View style={s.line}>
+            <Tag size={16} color={palette.primary1} />
+            <Text style={s.summaryType}>
+              {type ? `${type.icon} ${type.name}` : '❔ Classificar depois'}
+            </Text>
+          </View>
           <Text style={s.summaryCount}>
             {rfidCount} RFID · {items.length - rfidCount} códigos aqui ·{' '}
             {batch.items.length} no lote
@@ -155,6 +191,7 @@ export function ScannerView({
         </View>
         <Button
           title="Alterar"
+          icon={Pencil}
           variant="secondary"
           disabled={inventorying || scanningCode}
           onPress={onChangeSelection}
@@ -163,7 +200,7 @@ export function ScannerView({
 
       {!connected && (
         <Text style={s.warning}>
-          Conecte o leitor R6 na aba "Conectar" para escanear.
+          Leitor desconectado: toque em "Conectar leitor" no topo.
         </Text>
       )}
 
@@ -177,42 +214,21 @@ export function ScannerView({
           ]}
         />
         {mode === 'rfid' ? (
-          <View style={styles.wrap}>
-            <Button
-              title={
-                inventorying ? 'Parar leitura' : 'Iniciar leitura contínua'
-              }
-              variant={inventorying ? 'danger' : 'primary'}
-              disabled={!connected}
-              onPress={inventorying ? stopInventory : startInventory}
-            />
-            <Button
-              title="Leitura única"
-              variant="secondary"
-              disabled={!connected || inventorying}
-              onPress={readSingle}
-            />
-          </View>
+          <Button
+            title="Leitura única"
+            variant="tertiary"
+            disabled={!connected || inventorying}
+            onPress={readSingle}
+          />
         ) : (
-          <View style={styles.wrap}>
+          scanningCode && (
             <Button
-              title="Ler código"
-              disabled={!connected}
-              busy={scanningCode}
-              onPress={scanCode}
+              title="Cancelar leitura"
+              variant="tertiary"
+              onPress={() => reader.stopBarcode()}
             />
-            {scanningCode && (
-              <Button
-                title="Cancelar"
-                variant="secondary"
-                onPress={() => reader.stopBarcode()}
-              />
-            )}
-          </View>
+          )
         )}
-        <Muted>
-          O gatilho físico do R6 dispara a leitura no modo selecionado.
-        </Muted>
       </View>
 
       <FlatList
@@ -222,29 +238,76 @@ export function ScannerView({
         keyExtractor={i => i.id}
         renderItem={({ item }) => <ItemRow item={item} />}
         ListEmptyComponent={
-          <Muted>Nenhum item registrado neste local e tipo ainda.</Muted>
+          <EmptyState
+            icon={ScanLine}
+            title="Nenhum item neste local ainda"
+            message="Aperte o gatilho do R6 ou o botão abaixo para começar a leitura."
+          />
         }
       />
+
+      {mode === 'rfid' ? (
+        <Fab
+          icon={inventorying ? Square : Play}
+          label={inventorying ? 'Parar leitura' : 'Iniciar leitura contínua'}
+          variant={inventorying ? 'danger' : 'primary'}
+          disabled={!connected}
+          onPress={inventorying ? stopInventory : startInventory}
+        />
+      ) : (
+        <Fab
+          icon={ScanBarcode}
+          label={scanningCode ? 'Lendo…' : 'Ler código'}
+          disabled={!connected || scanningCode}
+          onPress={scanCode}
+        />
+      )}
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.bg },
+  container: { flex: 1, backgroundColor: color.background },
   summary: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    padding: 12,
-    backgroundColor: colors.card,
+    gap: space.sm,
+    padding: space.sm2,
+    backgroundColor: color.surface,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: color.divider,
   },
-  summaryPath: { fontSize: 15, fontWeight: '800', color: colors.text },
-  summaryType: { fontSize: 15, color: colors.primary, fontWeight: '700' },
-  summaryCount: { fontSize: 12, color: colors.muted },
-  warning: { color: colors.warning, paddingHorizontal: 12, paddingTop: 8 },
-  controls: { padding: 12, gap: 8 },
+  summaryText: { flex: 1, gap: space.xxs },
+  line: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
+  summaryPath: {
+    flex: 1,
+    fontFamily: font.bold,
+    fontSize: fontSize.md1,
+    color: color.textPrimary,
+  },
+  summaryType: {
+    fontFamily: font.bold,
+    fontSize: fontSize.md1,
+    color: palette.primary2,
+  },
+  summaryCount: {
+    fontFamily: font.regular,
+    fontSize: fontSize.sm,
+    color: color.textTertiary,
+  },
+  warning: {
+    fontFamily: font.bold,
+    color: palette.high3,
+    backgroundColor: palette.high0,
+    paddingHorizontal: space.sm2,
+    paddingVertical: space.sm,
+  },
+  controls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: space.sm2,
+  },
   list: { flex: 1 },
-  listContent: { paddingHorizontal: 12, paddingBottom: 12, gap: 2 },
+  listContent: { paddingHorizontal: space.sm2, paddingBottom: 96 },
 });

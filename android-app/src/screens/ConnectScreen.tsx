@@ -1,3 +1,5 @@
+import { useToast } from '../ui/toast';
+import { useNav } from '../ui/nav';
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 import { DeviceFound, frequencyLabel, reader } from '../reader/chainway';
@@ -27,6 +29,18 @@ export function ConnectScreen() {
   const [devices, setDevices] = useState<DeviceFound[]>([]);
   const [scanning, setScanning] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const toast = useToast();
+  const nav = useNav();
+  const connectingHere = useRef(false);
+
+  // After a connection started on this screen succeeds, go back to where the user was.
+  useEffect(() => {
+    if (connectingHere.current && connection.status === 'connected') {
+      connectingHere.current = false;
+      toast('Leitor conectado');
+      nav.pop();
+    }
+  }, [connection.status, toast, nav]);
 
   useEffect(() => {
     const sub = reader.onDeviceFound(d =>
@@ -76,6 +90,7 @@ export function ConnectScreen() {
     }
     stopScan();
     updateSettings({ lastDeviceAddress: address, lastDeviceName: name });
+    connectingHere.current = true;
     reader.connect(address);
   };
 
