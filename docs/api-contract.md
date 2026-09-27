@@ -127,6 +127,18 @@ Somente role `x_snc_nowrfid.admin` (ACL `NowRFID API promote`; integração rece
 { "result": { "promoted": 3, "failed": [ { "item": "<sys_id>", "message": "Tipo de bem sem modelo/categoria configurados" } ] } }
 ```
 
+## GET /dashboard (admin)
+
+Agregados do **Painel** (ACL `NowRFID API promote`, só `x_snc_nowrfid.admin`):
+- `kpis`: `batches_today`, `batches_7d`, `items_7d`, `items_total`, `pending`, `classified`, `promoted`, `tags_active`, `batches_error`, `orphan_tags`, `items_without_location`
+- `by_type`, `by_capture`, `per_day` (14 dias, UTC)
+- `root`, `locations` (mesma árvore de `/structure`) e `location_counts.{items,pending,classified}` por sala
+- `recent_batches`, `error_batches`
+
+## POST /dashboard/promote (admin)
+
+`{"items":[sys_id…]}` promove os itens selecionados. Sem `items`, `{"locations":[sys_id…]}` promove todos os classificados dessas salas; sem nenhum dos dois, promove todos os classificados (limite de 500). Resposta: `{ "promoted": n, "failed": [{ "item", "message" }] }`.
+
 ## Exemplos curl
 
 ```bash

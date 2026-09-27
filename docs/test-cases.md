@@ -86,16 +86,19 @@ A coluna **Última execução** traz a data e o que foi observado. Registre cada
 | TC-41 | Compartilhar | Debug → Compartilhar log | Texto legível com data e hora; filtro Leitor/ServiceNow respeitado | ✅ 26/09 |
 | TC-42 | Desligar | Config → desligar modo debug | A aba Debug some e nada mais é registrado | ⏳ |
 
-## 8. Painel NowRFID (Fase 2.5, planejado)
+## 8. Painel NowRFID (Fase 2.5)
+
+URL: `https://demoalectriallwfab151756.service-now.com/x_snc_nowrfid_painel.do` (NowRFID › Painel). Massa de demo: 5 lotes "NowRFID demo" (RFB0001002–1006), 41 itens: 30 classificados e 11 pendentes em 5 salas.
 
 | ID | Caso | Passos | Resultado esperado | Última execução |
 |---|---|---|---|---|
-| TC-50 | Abrir painel | Menu NowRFID › Painel (admin) | Abre em menos de 3 s com a massa de demo | — |
-| TC-51 | KPIs corretos | Comparar os cartões com as listas Lotes / Itens pendentes / Etiquetas | Os números batem | — |
-| TC-52 | Drill-down | Clicar em um prédio → andar → sala | Chega à lista de itens da sala | — |
-| TC-53 | Ação na fila | Na fila de pendentes: classificar e depois **Criar ativos** | Os ativos são criados e os KPIs atualizam | — |
-| TC-54 | Visual Horizon | Revisar nos temas claro e escuro | Cores, espaçamento e tipografia seguem o Horizon, sem cores fixas fora da paleta | — |
-| TC-55 | Acesso | Abrir com um usuário sem role admin | Sem acesso ao painel | — |
+| TC-50 | Abrir painel | Menu NowRFID › Painel (admin) | Abre em menos de 3 s: cabeçalho azul-marinho com logo, KPIs e árvore | ⏳ (página e módulo publicados 27/09; renderização não vista) |
+| TC-51 | KPIs corretos | Comparar os cartões com as listas | Pendentes 11, Classificados 30 (massa de demo) | ⏳ (contagens conferidas nas tabelas ✅ 27/09) |
+| TC-52 | Drill-down | Clicar Bloco A › Térreo › Sala 213840 | A URL ganha `?room=`; a fila mostra só os 11 itens da sala | ⏳ |
+| TC-53 | Classificar e criar ativos | Na fila: "Só pendentes", definir o tipo inline, selecionar linhas → **Criar ativos** | Mensagem "n ativo(s) criado(s)"; KPIs atualizam | ⏳ |
+| TC-54 | Visual Horizon | Revisar nos temas claro e escuro | Cores, espaçamento e tipografia seguem o Horizon (tokens `--now-*`) | ⏳ |
+| TC-55 | Acesso | `GET /dashboard` e `POST /dashboard/promote` com o usuário de integração | 403 "Failed API level ACL Validation" | ✅ 27/09 |
+| TC-56 | Filtro da lista | Trocar "Situação" e a sala | A lista respeita o filtro (valida o `fixedQuery` do `FilteredList`) | ⏳ |
 
 ## Testes automatizados
 
@@ -117,4 +120,5 @@ ServiceNow (`servicenow-app/`): `npm run build` valida os metadados. O teste de 
 | Data | Versão (commit) | Quem | Casos | Resultado |
 |---|---|---|---|---|
 | 26/09/2026 | `c7efc26` | Glaucco (campo, em casa) | TC-01–03, 06, 07, 09, 12, 13, 40, 41 | Conexão e leitura OK; leitura contínua parando, TID vazio, info do leitor -1, tipo do código vazio → corrigidos em `d5e7943` |
+| 27/09/2026 | Fase 2.5 | Agente (build/deploy/REST) | TC-55 | Painel publicado; rotas protegidas; renderização pendente de sessão admin |
 | 27/09/2026 | `45e79d1` | Agente (REST/curl) | TC-33–37 via API | Promoção cria ativos, etiquetas e `asset_tag`; 403 para integração; item com local inválido isolado |

@@ -3,6 +3,7 @@ import { RESTAPIRequest, RESTAPIResponse } from '@servicenow/glide/sn_ws_int'
 import { submitBatch } from '../batch-service.ts'
 import { getAssetTypes, getStructure } from '../structure-service.ts'
 import { promoteBatch } from '../promote-service.ts'
+import { getDashboard, promoteClassified } from '../dashboard-service.ts'
 
 export function ping(_request: RESTAPIRequest, response: RESTAPIResponse) {
     response.setStatus(200)
@@ -56,4 +57,25 @@ export function promoteBatchHandler(request: RESTAPIRequest, response: RESTAPIRe
     }
     response.setStatus(200)
     response.setBody(promoteBatch(batchId))
+}
+
+export function getDashboardHandler(_request: RESTAPIRequest, response: RESTAPIResponse) {
+    const result = getDashboard()
+    response.setStatus(result.status)
+    response.setBody(result.body)
+}
+
+export function promoteDashboardHandler(request: RESTAPIRequest, response: RESTAPIResponse) {
+    let payload: any = {}
+    try {
+        payload = request.body && request.body.data ? request.body.data : {}
+        if (typeof payload === 'string') payload = JSON.parse(payload || '{}')
+    } catch (e) {
+        response.setStatus(400)
+        response.setBody({ error: 'Invalid JSON body' })
+        return
+    }
+    const strings = (list: any): string[] => (Array.isArray(list) ? list.filter((x: any) => typeof x === 'string' && x) : [])
+    response.setStatus(200)
+    response.setBody(promoteClassified(strings(payload.locations), strings(payload.items)))
 }

@@ -21,6 +21,14 @@ declare global {
                         table: 'sys_ws_operation'
                         id: 'e9c451c4f78d47c4a31d5fcbbbba6f0b'
                     }
+                    'nowrfid-api-dashboard': {
+                        table: 'sys_ws_operation'
+                        id: 'e1b2ccd070a74b5e8d1138072673bf4f'
+                    }
+                    'nowrfid-api-dashboard-promote': {
+                        table: 'sys_ws_operation'
+                        id: 'fc00d5715a2144a1b8eab9ac5a3a8a37'
+                    }
                     'nowrfid-api-ping': {
                         table: 'sys_ws_operation'
                         id: '5482d21ca75e4aebb2b0a2e251c57152'
@@ -48,6 +56,10 @@ declare global {
                     'nowrfid-module-items': {
                         table: 'sys_app_module'
                         id: '2ea059e8264542aba56e05aa62983d8b'
+                    }
+                    'nowrfid-module-painel': {
+                        table: 'sys_app_module'
+                        id: '71005aff39cc4133ad54f09ffad0c184'
                     }
                     'nowrfid-module-pending': {
                         table: 'sys_app_module'
@@ -145,6 +157,10 @@ declare global {
                     'src_server_batch-service_ts': {
                         table: 'sys_module'
                         id: '84c2fdbf290b4f8fbb2a56066619199f'
+                    }
+                    'src_server_dashboard-service_ts': {
+                        table: 'sys_module'
+                        id: 'c96264b0ee5a465c8eb2ee8371c8207f'
                     }
                     'src_server_promote-service_ts': {
                         table: 'sys_module'
@@ -371,6 +387,13 @@ declare global {
                         key: {
                             name: 'x_snc_nowrfid_scan_item'
                             element: 'capture_type'
+                        }
+                    },
+                    {
+                        table: 'sys_ux_lib_asset'
+                        id: '1206be97f1b84beaaa30407fbf446513'
+                        key: {
+                            name: 'x_snc_nowrfid/main.js.map'
                         }
                     },
                     {
@@ -610,6 +633,13 @@ declare global {
                         id: '405e2e0ceada46e0b7008f6439c0a2a8'
                         key: {
                             name: 'x_snc_nowrfid_asset_type'
+                        }
+                    },
+                    {
+                        table: 'sys_ui_page'
+                        id: '40b9029cf3f7458f9999ad9d20306532'
+                        key: {
+                            endpoint: 'x_snc_nowrfid_painel.do'
                         }
                     },
                     {
@@ -1134,6 +1164,14 @@ declare global {
                         }
                     },
                     {
+                        table: 'sn_glider_source_artifact_m2m'
+                        id: '8e586c7e83a74024ac2ea7812b92527e'
+                        key: {
+                            application_file: '40b9029cf3f7458f9999ad9d20306532'
+                            source_artifact: 'f6abcce6ea20413a9cd32f0c400f575d'
+                        }
+                    },
+                    {
                         table: 'sys_dictionary'
                         id: '8f3541f1f06e4ecfafa8befb708d084a'
                         key: {
@@ -1164,6 +1202,14 @@ declare global {
                         key: {
                             name: 'x_snc_nowrfid_tag'
                             element: 'tid'
+                        }
+                    },
+                    {
+                        table: 'sn_glider_source_artifact_m2m'
+                        id: '98e64aaeddfb4e72921d1b8d0d7df96d'
+                        key: {
+                            application_file: 'd2bbb4bba1c34250ac22ed3e7f5d8930'
+                            source_artifact: 'f6abcce6ea20413a9cd32f0c400f575d'
                         }
                     },
                     {
@@ -1619,6 +1665,13 @@ declare global {
                         }
                     },
                     {
+                        table: 'sys_ux_lib_asset'
+                        id: 'd2bbb4bba1c34250ac22ed3e7f5d8930'
+                        key: {
+                            name: 'x_snc_nowrfid/main'
+                        }
+                    },
+                    {
                         table: 'sys_security_acl_role'
                         id: 'd3cfa57b17e9409699c35b082cd34b05'
                         key: {
@@ -1732,6 +1785,14 @@ declare global {
                         }
                     },
                     {
+                        table: 'sn_glider_source_artifact_m2m'
+                        id: 'e094cd06783f4b1a9c61e2f376aee410'
+                        key: {
+                            application_file: '1206be97f1b84beaaa30407fbf446513'
+                            source_artifact: 'f6abcce6ea20413a9cd32f0c400f575d'
+                        }
+                    },
+                    {
                         table: 'sys_index'
                         id: 'e39407aeeea2494ebec5d8669732fe27'
                         key: {
@@ -1837,6 +1898,13 @@ declare global {
                             value: 'app'
                             language: 'en'
                             dependent_value: 'NULL'
+                        }
+                    },
+                    {
+                        table: 'sn_glider_source_artifact'
+                        id: 'f6abcce6ea20413a9cd32f0c400f575d'
+                        key: {
+                            name: 'x_snc_nowrfid_painel.do - BYOUI Files'
                         }
                     },
                     {

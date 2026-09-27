@@ -5,7 +5,7 @@ App Fluent (Now SDK 4.9) que serve de **staging** para as capturas do app Androi
 - Escopo: `x_snc_nowrfid` · Nome: NowRFID · instalado em `demoalectriallwfab151756`
 - API: `/api/x_snc_nowrfid/nowrfid` — `GET /ping`, `GET /structure`, `GET /asset-types`, `POST /batch`, `POST /batch/{id}/promote` (admin). Contrato em [`../docs/api-contract.md`](../docs/api-contract.md)
 - Roles: `x_snc_nowrfid.integration` (app: lê estrutura/tipos, cria lotes) e `x_snc_nowrfid.admin` (CRUD, classificação, promoção; contém integration)
-- Menu **NowRFID**: Lotes · Itens pendentes de classificação · Itens (todos) · Etiquetas · Tipos de bem
+- Menu **NowRFID**: **Painel** · Lotes · Itens pendentes de classificação · Itens (todos) · Etiquetas · Tipos de bem
 
 ## Modelo de dados
 
@@ -16,6 +16,29 @@ App Fluent (Now SDK 4.9) que serve de **staging** para as capturas do app Androi
 | `x_snc_nowrfid_scan_batch` (Lote, `RFB…`) | Um envio do app: sala (`location`), tipo padrão (`asset_type`), aparelho, operador. |
 | `x_snc_nowrfid_scan_item` (Item) | Cada leitura/gravação (RFID/barcode/QR) com `location`, `asset_type`, `classification_status` (pending / classified / promoted / ignored), `promoted_asset`. |
 | `x_snc_nowrfid_tag` (Etiqueta RFID) | EPC/TID → ativo, criado na promoção de itens RFID. |
+
+## Painel (Fase 2.5)
+
+`https://<instancia>.service-now.com/x_snc_nowrfid_painel.do`, também em **NowRFID › Painel** (role `x_snc_nowrfid.admin`).
+
+- **Tecnologia:** UI Page em **React 18 + `@servicenow/react-components`**, entregue pelo próprio Now SDK (`UiPage`, `src/client/`).
+  - O HTML inclui `<sdk:now-ux-globals>`, então a página herda o tema Horizon da instância (tokens `--now-*`, modo escuro, fonte Lato).
+  - O `app.css` define uma camada de aliases (`--rf-*`) que lê os tokens `--now-*`, com os valores do tema Polaris desta instância como reserva.
+- **Identidade:**
+  - Faixa de cabeçalho em azul-marinho `#032D42` → índigo primário Horizon, com o logo (`brand/NowRFID-original.jpeg`, embutido em `src/client/assets/logo.ts`).
+  - Gráficos com a sequência categórica `--now-datavis_color--qualitative-*`.
+- **Conteúdo** (dados de `GET /dashboard`):
+  - KPIs: lotes hoje e 7 dias, itens, pendentes, classificados, ativos criados, etiquetas, lotes com erro.
+  - **Onde:** árvore localidade › prédio › andar › sala, com contagens acumuladas. Clicar filtra a fila (`?room=`).
+  - **O quê:** barras por tipo de bem e fichas por forma de captura.
+  - **Quando:** itens por dia, 14 dias.
+  - **Fila de trabalho:** `NowRecordListConnected` com edição inline do *Tipo de bem* e o botão **Criar ativos** (`POST /dashboard/promote`: as linhas selecionadas ou todos os classificados do escopo).
+  - **Qualidade:** lotes com erro, etiquetas órfãs, itens sem local.
+- **Código:**
+  - `src/client/` (app.tsx, components/, services/dashboardService.ts, utils/tree.ts)
+  - `src/server/dashboard-service.ts`
+  - `src/fluent/ui-pages/painel.now.ts`
+- **Detalhe técnico:** o wrapper `NowRecordListConnected` desta versão não tem a propriedade de filtro. O `components/FilteredList.tsx` aplica `fixedQuery` no elemento `<now-record-list-connected>` e remonta a lista quando o filtro muda.
 
 ## Fluxo
 
@@ -32,6 +55,8 @@ src/fluent/security/         roles, acls (inclui ACL REST "NowRFID API promote")
 src/fluent/rest/             nowrfid-api.now.ts (5 rotas)
 src/fluent/business-rules/   sync-classification
 src/fluent/ui/               actions.now.ts ("Criar ativos")
+src/fluent/ui-pages/         painel.now.ts (UI Page React do Painel)
+src/client/                  Painel (React + @servicenow/react-components)
 src/fluent/navigation/       menu.now.ts
 src/server/batch-service.ts      validação, idempotência, lote/itens
 src/server/structure-service.ts  árvore de locais e tipos de bem

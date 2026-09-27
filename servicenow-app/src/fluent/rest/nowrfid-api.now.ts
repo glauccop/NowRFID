@@ -1,5 +1,13 @@
 import { RestApi } from '@servicenow/sdk/core'
-import { ping, postBatch, getStructureHandler, getAssetTypesHandler, promoteBatchHandler } from '../../server/rest/handlers'
+import {
+    ping,
+    postBatch,
+    getStructureHandler,
+    getAssetTypesHandler,
+    promoteBatchHandler,
+    getDashboardHandler,
+    promoteDashboardHandler,
+} from '../../server/rest/handlers'
 import { restApiAcl, restPromoteAcl } from '../security/acls.now'
 
 RestApi({
@@ -11,6 +19,31 @@ RestApi({
     produces: 'application/json',
     enforceAcl: [restApiAcl],
     routes: [
+        {
+            $id: Now.ID['nowrfid-api-dashboard'],
+            name: 'dashboard',
+            method: 'GET',
+            path: '/dashboard',
+            script: getDashboardHandler,
+            authentication: true,
+            authorization: true,
+            enforceAcl: [restPromoteAcl],
+            produces: 'application/json',
+            shortDescription: 'Admin: aggregates for the NowRFID dashboard (Painel)',
+        },
+        {
+            $id: Now.ID['nowrfid-api-dashboard-promote'],
+            name: 'dashboard-promote',
+            method: 'POST',
+            path: '/dashboard/promote',
+            script: promoteDashboardHandler,
+            authentication: true,
+            authorization: true,
+            enforceAcl: [restPromoteAcl],
+            consumes: 'application/json',
+            produces: 'application/json',
+            shortDescription: 'Admin: create assets for classified items, optionally only in the given rooms ({"locations":[sys_id]})',
+        },
         {
             $id: Now.ID['nowrfid-api-promote'],
             name: 'promote',

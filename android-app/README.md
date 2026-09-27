@@ -66,7 +66,7 @@ npm run lint
 O APK é gerado no Ubuntu `glaucco@192.168.1.250` (JDK 17 + Android SDK em `~/Android/Sdk`):
 
 ```bash
-cd ~/NowRFID/r6-chainway-servicenow-rfid-project/android-app
+cd ~/NowRFID/<pasta-do-repositório>/android-app
 npm ci && cd android && ./gradlew assembleRelease
 cp app/build/outputs/apk/release/app-release.apk ~/NowRFID/download/NowRFID.apk
 cd ~/NowRFID/download && python3 -m http.server 8000     # celular: http://192.168.1.250:8000/NowRFID.apk

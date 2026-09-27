@@ -11,6 +11,20 @@ export const nowRfidMenu = ApplicationMenu({
 })
 
 Record({
+    $id: Now.ID['nowrfid-module-painel'],
+    table: 'sys_app_module',
+    data: {
+        title: 'Painel',
+        application: nowRfidMenu,
+        link_type: 'DIRECT',
+        query: 'x_snc_nowrfid_painel.do',
+        roles: [adminRole],
+        active: true,
+        order: 50,
+    },
+})
+
+Record({
     $id: Now.ID['nowrfid-module-batches'],
     table: 'sys_app_module',
     data: {

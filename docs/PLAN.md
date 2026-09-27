@@ -72,7 +72,21 @@ Detalhes em [`chainway-sdk-findings.md`](chainway-sdk-findings.md) e [`serviceno
 - [ ] Testar OAuth (só Basic foi testado).
 - [ ] Ação "Classificar como…" com janela de escolha; hoje a classificação é pela edição do tipo direto na lista.
 
-## Fase 2.5 — Painel NowRFID no ServiceNow (planejada)
+## Fase 2.5 — Identidade Horizon: app Android ✅ e painel ServiceNow ✅ instalado, ⏳ validação visual pendente (27/09)
+
+**App Android (commit `00454da`):** tokens Horizon (índigo `#4F52BD`, cabeçalho marinho `#032D42`, cores de status), fonte Lato embutida, barra inferior com 5 abas e ícones Lucide, telas empilhadas (Conectar, Debug) com voltar, botão flutuante de leitura, vibração em item novo, toasts, alvos de toque de 44 px e ícone novo (`brand/`).
+
+**Painel ServiceNow (como foi construído):** UI Page React 18 + `@servicenow/react-components` (caminho oficial do Now SDK 4.9, em vez do UI Builder), com `<sdk:now-ux-globals>` para herdar o tema Horizon da instância (tokens `--now-*`, modo escuro, Lato).
+- URL: `/x_snc_nowrfid_painel.do` — módulo **NowRFID › Painel** (só admin).
+- API: `GET /dashboard` (KPIs, locais, tipos, captura, linha do tempo, qualidade) e `POST /dashboard/promote`; integração recebe 403.
+- Massa de demo: 5 lotes (RFB0001002–1006), 41 itens (30 classificados, 11 pendentes), notas "NowRFID demo".
+
+**Pendências:**
+- [ ] Abrir o painel logado como admin e validar dados e visual (TC-50 a TC-54).
+- [ ] Filtro da fila de pendentes (`fixedQuery` aplicado direto no `NowRecordListConnected`) — TC-56; se falhar, trocar por tabela própria.
+- [ ] Teste em campo do APK com o visual novo.
+
+### Especificação original
 
 Um painel dentro do app escopado para acompanhar a operação, com **aparência elegante e cores envolventes, seguindo o Horizon Design System** ([horizon.servicenow.com](https://horizon.servicenow.com)).
 
@@ -124,8 +138,8 @@ Ver [`roadmap.md`](roadmap.md): catálogo offline no app (Fase 4), consulta de a
 
 | Item | Onde |
 |---|---|
-| Código | `github.com/glauccop/r6-chainway-servicenow-rfid-project` (`main`) |
-| Build do APK | Ubuntu `glaucco@192.168.1.250`: `~/NowRFID/r6-chainway-servicenow-rfid-project/android-app/android && ./gradlew assembleRelease` → `~/NowRFID/NowRFID.apk` |
+| Código | repositório **NowRFID** no GitHub (`glauccop`), branch `main` — renomeação do repositório e da pasta raiz pendente pelo usuário |
+| Build do APK | Ubuntu `glaucco@192.168.1.250`: `<raiz do repositório>/android-app/android && ./gradlew assembleRelease` → `~/NowRFID/NowRFID.apk` |
 | Distribuição | `cd ~/NowRFID/download && python3 -m http.server 8000` → `http://192.168.1.250:8000/NowRFID.apk` |
 | Deploy ServiceNow | `cd servicenow-app && npm run build && npx now-sdk install --auth demoalectri` |
 | Credencial de integração | usuário `nowrfid.integration`; senha **fora do repositório** |
