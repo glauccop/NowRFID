@@ -1,21 +1,21 @@
 # Roadmap NowRFID
 
-## Fase 1 — MVP (em construção)
+Detalhes, decisões e status em [`PLAN.md`](PLAN.md).
 
-App Android (React Native + TS + bridge Kotlin ao SDK Chainway) com leitura RFID, gravação/encode, lock/kill/erase, config de RF, barcode/QR e console de debug; envio de lotes para o app escopado `x_snc_nowrfid` (staging + Scripted REST API).
+| Fase | Escopo | Status |
+|---|---|---|
+| 1 — MVP | Leitura e gravação RFID, lock/kill/apagar, localizar, config de RF, barcode/QR, lote offline, Debug; staging + `POST /batch` | ✅ Concluída e testada em campo (26/09) |
+| 2 — Cadastramento por local | Estrutura nativa `cmn_location` sincronizada no app; sala + tipo de bem antes do scanner; classificação e **Criar ativos** → `alm_asset` / EAM | ✅ Código e deploy (27/09) · ⏳ teste em campo |
+| 2.5 — Painel NowRFID | Painel no app escopado (UI Builder / Next Experience) com a paleta e os componentes do **Horizon Design System**: KPIs, capturas por local e tipo, fila de pendentes com **Criar ativos**, qualidade; indicadores de levantamento quando a Fase 3 existir | Planejada |
+| 3 — Levantamento patrimonial | Levantamentos por UG e local; conferência no local / fora do local / sem cadastro / não encontrado; transferências; importador do JSON antigo; EPC GIAI-96 com o patrimônio | 🔜 Próxima |
+| 4 — Catálogo offline | `GET /catalog?location=`: o app mostra patrimônio, descrição e situação do bem já na leitura, sem rede | Planejada |
+| 5 — Consulta de ativos pelo app | Consultar e vincular ativos existentes. Avaliar o **ServiceNow Mobile SDK** (`NowData`) em vez de uma API própria; exige ponte nativa no RN | A avaliar (spike) |
+| 6 — Modelo nativo de RFID | Verificar se `sn_itam_common_rfid_asset` / `alm_asset.rfid_tag` aceitam leitores não-Zebra por API aberta; se sim, migrar a tabela de etiquetas | A avaliar |
 
-## Fase 2 — Reconciliação / promoção para EAM
+## Backlog técnico
 
-Ferramenta administrativa no app escopado para casar `Scan Item` com `alm_asset` (ou `sn_ent_asset` / `sn_ent_facility_asset` se o plugin EAM estiver ativo) por EPC, serial ou asset tag, e promover em lote (criar ou atualizar ativos). Campos `match_status` e `matched_asset` já existem no staging. A classe de destino será definida ao confirmar o estado da instância do cliente.
-
-## Fase 3 — Hierarquia de localização no app
-
-Ler `cmn_location` (árvore via `parent`, tipo via `cmn_location_type`) e `cmn_department` pela Table API (GET) com cache offline; o operador escolhe prédio › andar › sala / departamento antes de capturar. O lote passa a enviar `location`/`department` (colunas já existentes em `x_snc_nowrfid_scan_batch`), e a promoção da Fase 2 copia para o ativo.
-
-## Fase 4 — Consulta de ativos a partir do app
-
-Consultar ativos existentes no ServiceNow dentro do app (verificar/vincular antes de enviar). **Avaliar** usar o **ServiceNow Mobile SDK** (`NowData`) — caminho oficial para embutir dados da instância num app próprio — em vez de uma API de leitura própria. Requer bridge nativo adicional no React Native; fazer um spike antes.
-
-## Fase 5 — Modelo nativo de RFID
-
-Validar (teste direto ou caso no Now Support) se `sn_itam_common_rfid_asset` / `alm_asset.rfid_tag` aceita dados de leitores não‑Zebra via API aberta. Se sim, migrar do campo `epc` do staging para o modelo nativo.
+- Ação "Classificar como…" com janela de escolha (hoje: edição do tipo na lista).
+- Testar OAuth ponta a ponta (hoje só Basic).
+- Chave de assinatura própria para o APK (hoje: chave de debug do template).
+- Encriptação de tag: não existe na API `RFIDWithUHFBLE` da versão atual do SDK.
+- Bytes brutos do BLE no Debug: o listener do SDK não é usado pela demo oficial e poderia interferir no parse.

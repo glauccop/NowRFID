@@ -94,3 +94,13 @@ Obs.: o pacote `com.rscja.barcode` (`BarcodeDecoder`, `BarcodeFactory`) é para 
 - Mobile App Builder é no‑code sobre o app compilado pela ServiceNow; não aceita `.aar` nem plugins nativos.
 - Leitores Bluetooth só funcionam no Now Mobile em modo **HID (teclado)** — o que é função do SO, não do app, e não permite inventário, RSSI, gravação, lock/kill.
 - O **Mobile SDK** da ServiceNow faz o caminho inverso (embutir ServiceNow num app próprio) — por isso o NowRFID é um app Android próprio.
+
+## Aprendizados do teste em campo (26/09/2026)
+
+Do log real do R6 com um celular em pt-BR (corrigidos no commit `d5e7943`):
+
+- **Comandos logo após conectar são ignorados.** `setEPCAndTIDMode()` devolveu `false` e todas as leituras de informação do leitor vieram `-1`. Os comandos iniciais agora esperam cerca de 1 s e tentam de novo até 3 vezes. O `setBarcodeTypeInSSIID(true)` espera 800 ms.
+- **O RSSI chega formatado pela língua do celular** (`"-44,10"`). O app converte para número (`-44.1`).
+- **`getBarcodeSSIID()` veio `-1`** (simbologia vazia) quando a configuração foi enviada cedo demais. Quando isso acontece, o app deduz EAN-13, EAN-8, UPC-A e GTIN-14 pelo próprio código.
+- **Etiquetas virgens compradas:** EPC de 96 bits, PC `3400`, sem cabeçalho GS1. Os 16 primeiros caracteres parecem aleatórios e o final se repete (`…7271F1xx`, sequencial de 4 em 4). O EPC de fábrica não identifica nada, então é preciso gravar o EPC (Fase 3: GIAI-96) ou manter o cadastro de etiquetas (Fase 2).
+- **O gatilho físico chega como `onKeyDown(keyCode=1)`.** O app usa a borda de descida para ligar e desligar a leitura.
