@@ -91,6 +91,8 @@ Um painel dentro do app escopado para acompanhar a operação, com **aparência 
 - **Qualidade:** lotes com erro, itens rejeitados (local ou tipo inválidos), etiquetas órfãs.
 - **Fase 3 (quando houver levantamento):** % no local / fora do local / sem cadastro / não encontrado por levantamento, e o painel de transferências a aprovar.
 
+**Logo:** `brand/nowrfid-logo-512.png` (arte original) no cabeçalho do painel. Enviar como imagem do app/página no UI Builder; o azul-marinho `#062F41` do logo conversa com o splash do Horizon (`#032D42`).
+
 **Acesso:** role `x_snc_nowrfid.admin` (e uma role de leitura para gestores, se desejado). Entra como módulo **NowRFID › Painel** no menu.
 
 **Aceite:** o painel abre em menos de 3 s com a massa de demo; os números batem com as listas; o drill-down chega à sala; o visual foi revisado contra o Horizon (cores, espaçamento, tipografia) nos temas claro e escuro.

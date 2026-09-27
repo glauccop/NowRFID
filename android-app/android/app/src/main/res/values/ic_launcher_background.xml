@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Navy of the NowRFID logo (close to Horizon native-mobile splash #032D42). -->
+    <color name="ic_launcher_background">#062F41</color>
+</resources>

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
+  Image,
   ActivityIndicator,
   Pressable,
   StatusBar,
@@ -65,7 +66,14 @@ function Shell() {
   return (
     <SafeAreaView style={styles.flex} edges={['top', 'bottom']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>NowRFID</Text>
+        <View style={styles.brand}>
+          <Image
+            source={require('./src/assets/logo-mark.png')}
+            style={styles.logo}
+            accessibilityLabel="NowRFID"
+          />
+          <Text style={styles.headerTitle}>NowRFID</Text>
+        </View>
         <View style={styles.headerRight}>
           <Text style={styles.headerText}>{batch.items.length} no lote</Text>
           <View style={[styles.dot, { backgroundColor: dot }]} />
@@ -115,6 +123,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     backgroundColor: colors.dark,
   },
+  brand: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  logo: { width: 32, height: 32 },
   headerTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '800' },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   headerText: { color: '#C9D1D9', fontSize: 13 },
