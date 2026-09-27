@@ -2,6 +2,47 @@
 
 Atualizado em 27/09/2026. Histórico de decisões e status por fase. Roadmap resumido em [`roadmap.md`](roadmap.md); casos de teste em [`test-cases.md`](test-cases.md).
 
+## Situação atual e pendências
+
+Ponto de parada em 27/09/2026 (último commit `e79e100`). Tudo o que foi construído está commitado; nada foi deixado pela metade no código.
+
+**Onde está cada coisa**
+
+| O quê | Estado |
+|---|---|
+| App Android (React Native + ponte Kotlin) | Fases 1, 2 e 2.5 prontas; APK Horizon gerado no Ubuntu (`~/NowRFID/NowRFID.apk`) |
+| App ServiceNow `x_snc_nowrfid` | Instalado em `demoalectriallwfab151756`: staging, tipos de bem, etiquetas, API, **Criar ativos** e painel |
+| Massa de demo na instância | Árvore "UG 100001 – Brasília (NowRFID)" (28 locais), 20 tipos, 10 ativos, 5 lotes / 41 itens "NowRFID demo", usuário `nowrfid.integration` |
+| Testes automatizados | 19 Jest passando, `tsc` e lint limpos; `npm run build` do servicenow-app ok |
+| Git | 4 commits **locais, sem push**: `706e711`, `c731051`, `00454da`, `e79e100` |
+
+**Pendências, em ordem sugerida**
+
+1. **Git e nomes**
+   - [ ] `git push` dos 4 commits locais.
+   - [ ] Renomear o repositório no GitHub e a pasta raiz para `NowRFID`; depois `git remote set-url origin …` e atualizar a cópia no Ubuntu (`~/NowRFID/<pasta>`).
+2. **Validação no ServiceNow (logado como admin)** — casos em [`test-cases.md`](test-cases.md) §6 e §8
+   - [ ] Abrir o painel `/x_snc_nowrfid_painel.do` e conferir KPIs, drill-down e visual claro/escuro (TC-50 a TC-54).
+   - [ ] Conferir o filtro da fila de pendentes (TC-56). Risco conhecido: o filtro usa um contorno (`fixedQuery` no `NowRecordListConnected`); se não funcionar, trocar por tabela própria em `src/client/components/FilteredList.tsx`.
+   - [ ] Clicar **Criar ativos** pela interface — lista e painel (TC-33, TC-53); hoje só a rota REST foi testada.
+3. **Teste em campo com o R6 e o APK novo** — [`test-cases.md`](test-cases.md) §1–5 e §9
+   - [ ] Retestes das correções de 26/09: TC-04, 06, 09, 10, 12 (tipo).
+   - [ ] Fluxo da Fase 2: TC-20 a TC-28 (sincronizar → sala e tipo → escanear → enviar → ver itens sob a sala).
+   - [ ] Visual Horizon do app: TC-60 a TC-64.
+   - [ ] Gravação e ferramentas: TC-16 a TC-19.
+4. **Backlog técnico da Fase 2** (ver [`roadmap.md`](roadmap.md))
+   - [ ] Ação "Classificar como…" com janela de escolha.
+   - [ ] Testar OAuth ponta a ponta (só Basic foi testado).
+   - [ ] Chave de assinatura própria para o APK (hoje: chave de debug do template).
+5. **Fase 3 — Levantamento patrimonial** (desenho abaixo). Antes de começar, responder: significado de C06 e C09 no export antigo; se a instituição tem prefixo GS1 licenciado (GIAI-96); se local filho conta como o local levantado.
+
+**Cuidados para quem continuar**
+- A senha do `nowrfid.integration` **não está e não deve ir** para o repositório.
+- Os JSON do sistema antigo são patrimônio real da instituição: ficam fora do repositório (pasta local `amostras/`).
+- A instância é compartilhada: manter tudo no escopo e identificar dados de demo como "NowRFID".
+- A propriedade `x_snc_nowrfid.location_root` foi criada direto na instância (não está no pacote); em outra instância é preciso criá-la apontando para a raiz dos locais.
+- O Mac corporativo não tem admin: o APK é gerado no Ubuntu (ver "Operação" no fim deste arquivo).
+
 ## Contexto
 
 A instituição (setor público, patrimônio por UG) precisa registrar e inventariar bens com o leitor **Chainway R6** (UHF RFID + imager de código de barras/QR, via Bluetooth LE) e levar isso ao módulo **EAM** do ServiceNow.

@@ -100,13 +100,25 @@ URL: `https://demoalectriallwfab151756.service-now.com/x_snc_nowrfid_painel.do` 
 | TC-55 | Acesso | `GET /dashboard` e `POST /dashboard/promote` com o usuário de integração | 403 "Failed API level ACL Validation" | ✅ 27/09 |
 | TC-56 | Filtro da lista | Trocar "Situação" e a sala | A lista respeita o filtro (valida o `fixedQuery` do `FilteredList`) | ⏳ |
 
+## 9. App Android com identidade Horizon (Fase 2.5)
+
+APK `00454da` (compilado em 27/09, fontes Lato e telas novas conferidas dentro do pacote).
+
+| ID | Caso | Passos | Esperado | Status |
+|---|---|---|---|---|
+| TC-60 | Ícone e cabeçalho | Instalar o APK e abrir | Ícone NowRFID na tela inicial; cabeçalho marinho com logo e chip "Conectar leitor" | ⏳ |
+| TC-61 | Navegação | Tocar nas 5 abas; tocar no chip do leitor; voltar pelo botão do Android | Escanear/Gravar/Lote/Ferramentas/Ajustes; Conectar abre empilhada e o voltar retorna à aba anterior | ⏳ |
+| TC-62 | Conectar e voltar | Chip do leitor → conectar ao R6 | Toast "Leitor conectado" e retorno automático à tela de origem; chip mostra "R6 · bateria %" | ⏳ |
+| TC-63 | Botão flutuante e vibração | Escanear → botão flutuante Iniciar → aproximar tags → Parar | Vibra só em item novo; releitura só aumenta o contador; a leitura continua até Parar (regressão do TC-06) | ⏳ |
+| TC-64 | Toasts | Sincronizar estrutura; gravar tag; enviar lote | Toast verde "Estrutura sincronizada" / "EPC gravado" / "Lote enviado"; erros continuam em diálogo | ⏳ |
+
 ## Testes automatizados
 
 App (`android-app/`, rodar `npm test`, `npm run typecheck` e `npm run lint`):
 
 | Arquivo | Cobre |
 |---|---|
-| `__tests__/App.test.tsx` | O app monta com o módulo nativo simulado |
+| `__tests__/App.test.tsx` | O app monta com o módulo nativo simulado; shell Horizon com 5 abas e tela empilhada do leitor |
 | `__tests__/logic.test.ts` | Geração e validação de EPC, senha, base64 (UTF-8), agrupamento de leituras (lidas × gravadas) |
 | `__tests__/fieldSample.test.ts` | Valores reais do teste de 26/09: RSSI `-44,10`, EAN-13 `7898930575377`, `MB729387468` |
 | `__tests__/ScanScreen.test.tsx` | **Regressão**: a leitura contínua não para quando chegam tags (falha no código antigo, passa no novo) |
@@ -120,5 +132,6 @@ ServiceNow (`servicenow-app/`): `npm run build` valida os metadados. O teste de 
 | Data | Versão (commit) | Quem | Casos | Resultado |
 |---|---|---|---|---|
 | 26/09/2026 | `c7efc26` | Glaucco (campo, em casa) | TC-01–03, 06, 07, 09, 12, 13, 40, 41 | Conexão e leitura OK; leitura contínua parando, TID vazio, info do leitor -1, tipo do código vazio → corrigidos em `d5e7943` |
-| 27/09/2026 | Fase 2.5 | Agente (build/deploy/REST) | TC-55 | Painel publicado; rotas protegidas; renderização pendente de sessão admin |
+| 27/09/2026 | `00454da` | Agente (Jest/tsc/lint + build Ubuntu) | Automatizados | 19 testes Jest passando, tsc e lint limpos; APK Horizon gerado (BUILD SUCCESSFUL) |
+| 27/09/2026 | `e79e100` | Agente (build/deploy/REST) | TC-55 | Painel publicado; rotas protegidas; renderização pendente de sessão admin |
 | 27/09/2026 | `45e79d1` | Agente (REST/curl) | TC-33–37 via API | Promoção cria ativos, etiquetas e `asset_tag`; 403 para integração; item com local inválido isolado |

@@ -18,7 +18,7 @@ app --HTTPS--> /api/x_snc_nowrfid/nowrfid/batch --> staging (itens sob a sala)
 admin: classificar → "Criar ativos" --> alm_asset / sn_ent_facility_asset / alm_hardware + etiqueta RFID
 ```
 
-Status: Fase 1 (MVP) concluída e testada em campo; Fase 2 (cadastramento por local) instalada em `demoalectriallwfab151756`, aguardando teste em campo; Fase 3 (levantamento patrimonial) é a próxima. Ver [roadmap](docs/roadmap.md).
+Status (27/09/2026): Fase 1 (MVP) concluída e testada em campo; Fase 2 (cadastramento por local) e Fase 2.5 (identidade Horizon no app + painel `x_snc_nowrfid_painel.do`) instaladas em `demoalectriallwfab151756`, aguardando teste em campo e validação visual; Fase 3 (levantamento patrimonial) é a próxima. **O que falta está em [PLAN.md › Situação atual e pendências](docs/PLAN.md#situação-atual-e-pendências).**
 
 ## Começando
 
