@@ -38,6 +38,6 @@ alm_asset
 
 ## Onde o NowRFID entra
 
-O app grava em tabelas **próprias** de staging (`x_nowrfid_scan_batch`, `x_nowrfid_scan_item`). A promoção para `alm_asset`/`sn_ent_asset` é uma etapa administrativa posterior (Fase 2), permitindo revisar, deduplicar e casar com ativos existentes antes de tocar o EAM.
+O app grava em tabelas **próprias** de staging (`x_snc_nowrfid_scan_batch`, `x_snc_nowrfid_scan_item`). A promoção para `alm_asset`/`sn_ent_asset` é uma etapa administrativa posterior (Fase 2), permitindo revisar, deduplicar e casar com ativos existentes antes de tocar o EAM.
 
 Alternativas de mercado já no Store (avaliar antes de construir além do MVP): CG4 Asset Tracking, AssetTrack for ServiceNow, Mobile Reach.

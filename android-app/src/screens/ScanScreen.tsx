@@ -1,23 +1,35 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Text, View } from 'react-native';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { Alert, FlatList, StyleSheet, Text, View } from 'react-native';
 import { reader } from '../reader/chainway';
 import { barcodeToItem, tagToItem, useApp } from '../state/AppState';
-import {
-  Badge,
-  Button,
-  Card,
-  colors,
-  Muted,
-  Screen,
-  Segmented,
-  styles,
-} from '../ui/components';
+import { Button, colors, Muted, Segmented, styles } from '../ui/components';
 import { ItemRow } from './ItemRow';
+import { PrepareCapture } from './PrepareCapture';
 
 type Mode = 'rfid' | 'barcode';
 
+/** Entry of the capture flow: prepare (room + asset type) first, then scan. */
 export function ScanScreen() {
-  const { connection, batch, addItems } = useApp();
+  const { captureContext } = useApp();
+  const [preparing, setPreparing] = useState(!captureContext);
+  if (preparing || !captureContext) {
+    return <PrepareCapture onStart={() => setPreparing(false)} />;
+  }
+  return <ScannerView onChangeSelection={() => setPreparing(true)} />;
+}
+
+export function ScannerView({
+  onChangeSelection,
+}: {
+  onChangeSelection: () => void;
+}) {
+  const { connection, batch, addItems, captureContext, assetTypes } = useApp();
   const [mode, setMode] = useState<Mode>('rfid');
   const [inventorying, setInventorying] = useState(false);
   const [scanningCode, setScanningCode] = useState(false);
@@ -110,20 +122,52 @@ export function ScanScreen() {
     setMode(m);
   };
 
-  const rfidCount = batch.items.filter(i => i.captureType === 'rfid').length;
-  const codeCount = batch.items.length - rfidCount;
-  const recent = [...batch.items].reverse().slice(0, 50);
+  const type = assetTypes.find(t => t.sys_id === captureContext?.assetType);
+  // Newest first; re-reads only bump the counter in place so the list doesn't jump.
+  const items = useMemo(
+    () =>
+      batch.items
+        .filter(
+          i =>
+            i.location === captureContext?.location &&
+            (i.assetType ?? '') === (captureContext?.assetType ?? ''),
+        )
+        .reverse(),
+    [batch.items, captureContext],
+  );
+  const rfidCount = items.filter(i => i.captureType === 'rfid').length;
 
   return (
-    <Screen>
-      {!connected && (
-        <Card>
-          <Text style={[styles.text, { color: colors.warning }]}>
-            Conecte o leitor R6 na aba "Conectar" para escanear.
+    <View style={s.container}>
+      <View style={s.summary}>
+        <View style={styles.flex1}>
+          <Text style={s.summaryPath} numberOfLines={2}>
+            {captureContext?.locationPath.slice(1).join(' › ') ||
+              captureContext?.locationPath.join(' › ')}
           </Text>
-        </Card>
+          <Text style={s.summaryType}>
+            {type ? `${type.icon} ${type.name}` : '❔ Classificar depois'}
+          </Text>
+          <Text style={s.summaryCount}>
+            {rfidCount} RFID · {items.length - rfidCount} códigos aqui ·{' '}
+            {batch.items.length} no lote
+          </Text>
+        </View>
+        <Button
+          title="Alterar"
+          variant="secondary"
+          disabled={inventorying || scanningCode}
+          onPress={onChangeSelection}
+        />
+      </View>
+
+      {!connected && (
+        <Text style={s.warning}>
+          Conecte o leitor R6 na aba "Conectar" para escanear.
+        </Text>
       )}
-      <Card title="Escanear ativos">
+
+      <View style={s.controls}>
         <Segmented
           value={mode}
           onChange={changeMode}
@@ -167,25 +211,40 @@ export function ScanScreen() {
           </View>
         )}
         <Muted>
-          O gatilho físico do R6 também dispara a leitura no modo selecionado.
+          O gatilho físico do R6 dispara a leitura no modo selecionado.
         </Muted>
-      </Card>
+      </View>
 
-      <Card
-        title="Lote atual"
-        right={<Badge text={`${rfidCount} RFID · ${codeCount} códigos`} />}
-      >
-        {recent.length === 0 && <Muted>Nenhum item lido ainda.</Muted>}
-        {recent.map(item => (
-          <ItemRow key={item.id} item={item} />
-        ))}
-        {batch.items.length > recent.length && (
-          <Muted>
-            … e mais {batch.items.length - recent.length} itens (veja a aba
-            Lote).
-          </Muted>
-        )}
-      </Card>
-    </Screen>
+      <FlatList
+        style={s.list}
+        contentContainerStyle={s.listContent}
+        data={items}
+        keyExtractor={i => i.id}
+        renderItem={({ item }) => <ItemRow item={item} />}
+        ListEmptyComponent={
+          <Muted>Nenhum item registrado neste local e tipo ainda.</Muted>
+        }
+      />
+    </View>
   );
 }
+
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.bg },
+  summary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 12,
+    backgroundColor: colors.card,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  summaryPath: { fontSize: 15, fontWeight: '800', color: colors.text },
+  summaryType: { fontSize: 15, color: colors.primary, fontWeight: '700' },
+  summaryCount: { fontSize: 12, color: colors.muted },
+  warning: { color: colors.warning, paddingHorizontal: 12, paddingTop: 8 },
+  controls: { padding: 12, gap: 8 },
+  list: { flex: 1 },
+  listContent: { paddingHorizontal: 12, paddingBottom: 12, gap: 2 },
+});

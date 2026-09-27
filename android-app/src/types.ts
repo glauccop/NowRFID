@@ -13,6 +13,10 @@ export interface ScanItem {
   barcodeValue?: string;
   symbology?: string;
   capturedAt: string;
+  /** cmn_location sys_id of the room selected when the item was captured. */
+  location?: string;
+  /** x_snc_nowrfid_asset_type sys_id; empty = classify later in ServiceNow. */
+  assetType?: string;
   raw: Record<string, unknown>;
 }
 
@@ -48,7 +52,7 @@ export interface Settings {
 
 export const DEFAULT_SETTINGS: Settings = {
   instanceUrl: '',
-  apiPath: '/api/x_nowrfid/nowrfid',
+  apiPath: '/api/x_snc_nowrfid/nowrfid',
   authMode: 'basic',
   username: '',
   password: '',
@@ -62,3 +66,37 @@ export const DEFAULT_SETTINGS: Settings = {
 };
 
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected';
+
+export const LEGACY_API_PATH = '/api/x_nowrfid/nowrfid';
+
+/** Node of the cmn_location tree served by GET /structure. */
+export interface LocationNode {
+  sys_id: string;
+  name: string;
+  /** Raw cmn_location_type value: site, building/structure, floor, room... */
+  type: string;
+  parent: string;
+  full_name: string;
+  active: boolean;
+}
+
+export interface Structure {
+  root: string;
+  serverTime: string;
+  syncedAt: string;
+  locations: LocationNode[];
+}
+
+export interface AssetType {
+  sys_id: string;
+  name: string;
+  icon: string;
+  order: number;
+}
+
+/** What the operator selected before starting the scanner. */
+export interface CaptureContext {
+  location: string;
+  locationPath: string[];
+  assetType?: string;
+}

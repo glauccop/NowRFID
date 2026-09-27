@@ -22,7 +22,10 @@ import {
 
 /** "Tag sendo criada": read the target tag, write a new EPC (and optional USER data), verify, add to batch. */
 export function WriteScreen() {
-  const { connection, addItems } = useApp();
+  const { connection, addItems, captureContext, assetTypes } = useApp();
+  const contextType = assetTypes.find(
+    t => t.sys_id === captureContext?.assetType,
+  );
   const connected = connection.status === 'connected';
   const [target, setTarget] = useState<TagRead | null>(null);
   const [newEpc, setNewEpc] = useState('');
@@ -153,6 +156,22 @@ export function WriteScreen() {
 
   return (
     <Screen>
+      <Card title="Registrando em">
+        {captureContext ? (
+          <Text style={styles.text}>
+            {captureContext.locationPath.slice(1).join(' › ')}
+            {'\n'}
+            {contextType
+              ? `${contextType.icon} ${contextType.name}`
+              : '❔ Classificar depois'}
+          </Text>
+        ) : (
+          <Text style={[styles.text, { color: colors.warning }]}>
+            Nenhum local selecionado: escolha a sala e o tipo na aba Escanear. A
+            tag gravada irá sem local.
+          </Text>
+        )}
+      </Card>
       {!connected && (
         <Card>
           <Text style={[styles.text, { color: colors.warning }]}>

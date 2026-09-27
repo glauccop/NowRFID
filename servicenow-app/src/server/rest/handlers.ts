@@ -1,13 +1,15 @@
-import { gs, GlideDateTime } from '@servicenow/glide'
+import { gs, GlideDateTime, GlideRecord } from '@servicenow/glide'
 import { RESTAPIRequest, RESTAPIResponse } from '@servicenow/glide/sn_ws_int'
-import { submitBatch } from '../batch-service'
+import { submitBatch } from '../batch-service.ts'
+import { getAssetTypes, getStructure } from '../structure-service.ts'
+import { promoteBatch } from '../promote-service.ts'
 
 export function ping(_request: RESTAPIRequest, response: RESTAPIResponse) {
     response.setStatus(200)
     response.setBody({
         ok: true,
         user: gs.getUserName(),
-        scope: 'x_nowrfid',
+        scope: 'x_snc_nowrfid',
         time: new GlideDateTime().getValue(),
     } as any)
 }
@@ -25,4 +27,33 @@ export function postBatch(request: RESTAPIRequest, response: RESTAPIResponse) {
     const result = submitBatch(payload)
     response.setStatus(result.status)
     response.setBody(result.body as any)
+}
+
+function firstParam(value: any): string {
+    if (value === undefined || value === null) return ''
+    return String(Array.isArray(value) ? value[0] : value)
+}
+
+export function getStructureHandler(request: RESTAPIRequest, response: RESTAPIResponse) {
+    const result = getStructure(firstParam(request.queryParams && request.queryParams.since))
+    response.setStatus(result.status)
+    response.setBody(result.body)
+}
+
+export function getAssetTypesHandler(_request: RESTAPIRequest, response: RESTAPIResponse) {
+    const result = getAssetTypes()
+    response.setStatus(result.status)
+    response.setBody(result.body)
+}
+
+export function promoteBatchHandler(request: RESTAPIRequest, response: RESTAPIResponse) {
+    const batchId = firstParam(request.pathParams && request.pathParams.batch_sys_id)
+    const batch = new GlideRecord('x_snc_nowrfid_scan_batch')
+    if (!batchId || !batch.get(batchId)) {
+        response.setStatus(404)
+        response.setBody({ error: 'Batch not found' })
+        return
+    }
+    response.setStatus(200)
+    response.setBody(promoteBatch(batchId))
 }

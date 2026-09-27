@@ -1,6 +1,6 @@
 import { RestApi } from '@servicenow/sdk/core'
-import { ping, postBatch } from '../../server/rest/handlers'
-import { restApiAcl } from '../security/acls.now'
+import { ping, postBatch, getStructureHandler, getAssetTypesHandler, promoteBatchHandler } from '../../server/rest/handlers'
+import { restApiAcl, restPromoteAcl } from '../security/acls.now'
 
 RestApi({
     $id: Now.ID['nowrfid-api'],
@@ -11,6 +11,42 @@ RestApi({
     produces: 'application/json',
     enforceAcl: [restApiAcl],
     routes: [
+        {
+            $id: Now.ID['nowrfid-api-promote'],
+            name: 'promote',
+            method: 'POST',
+            path: '/batch/{batch_sys_id}/promote',
+            script: promoteBatchHandler,
+            authentication: true,
+            authorization: true,
+            enforceAcl: [restPromoteAcl],
+            produces: 'application/json',
+            shortDescription: 'Admin: create assets for every classified, not yet promoted item of a batch',
+        },
+        {
+            $id: Now.ID['nowrfid-api-structure'],
+            name: 'structure',
+            method: 'GET',
+            path: '/structure',
+            script: getStructureHandler,
+            authentication: true,
+            authorization: true,
+            enforceAcl: [restApiAcl],
+            produces: 'application/json',
+            shortDescription: 'Location tree (root = x_snc_nowrfid.location_root). Optional ?since=ISO8601 for delta sync',
+        },
+        {
+            $id: Now.ID['nowrfid-api-asset-types'],
+            name: 'asset-types',
+            method: 'GET',
+            path: '/asset-types',
+            script: getAssetTypesHandler,
+            authentication: true,
+            authorization: true,
+            enforceAcl: [restApiAcl],
+            produces: 'application/json',
+            shortDescription: 'Active asset types (Tipos de bem) for the capture menu',
+        },
         {
             $id: Now.ID['nowrfid-api-ping'],
             name: 'ping',

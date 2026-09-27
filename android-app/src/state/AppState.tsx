@@ -17,13 +17,17 @@ import {
   TagRead,
 } from '../reader/chainway';
 import { store } from '../storage/store';
+import { mergeStructure } from '../structure/tree';
 import {
+  AssetType,
+  CaptureContext,
   ConnectionState,
   DEFAULT_SETTINGS,
   Operation,
   ScanBatch,
   ScanItem,
   Settings,
+  Structure,
 } from '../types';
 import { inferSymbology, normalizeRssi } from '../utils/codes';
 import { uuid } from '../utils/ids';
@@ -40,6 +44,9 @@ interface State {
   readerInfo: ReaderInfo;
   batch: ScanBatch;
   history: ScanBatch[];
+  structure: Structure | null;
+  assetTypes: AssetType[];
+  captureContext: CaptureContext | null;
 }
 
 type Action =
@@ -48,7 +55,12 @@ type Action =
       settings: Settings;
       batch: ScanBatch | null;
       history: ScanBatch[];
+      structure: Structure | null;
+      assetTypes: AssetType[];
+      captureContext: CaptureContext | null;
     }
+  | { type: 'synced'; structure: Structure; assetTypes: AssetType[] }
+  | { type: 'captureContext'; context: CaptureContext | null }
   | { type: 'settings'; patch: Partial<Settings> }
   | { type: 'connection'; connection: Connection }
   | { type: 'readerInfo'; info: ReaderInfo }
@@ -185,7 +197,18 @@ function reducer(state: State, action: Action): State {
         settings: action.settings,
         batch: action.batch ?? emptyBatch(),
         history: action.history,
+        structure: action.structure,
+        assetTypes: action.assetTypes,
+        captureContext: action.captureContext,
       };
+    case 'synced':
+      return {
+        ...state,
+        structure: action.structure,
+        assetTypes: action.assetTypes,
+      };
+    case 'captureContext':
+      return { ...state, captureContext: action.context };
     case 'settings':
       return { ...state, settings: { ...state.settings, ...action.patch } };
     case 'connection':
@@ -206,7 +229,10 @@ function reducer(state: State, action: Action): State {
         batch: {
           ...state.batch,
           status: 'open',
-          items: mergeItems(state.batch.items, action.items),
+          items: mergeItems(
+            state.batch.items,
+            stampContext(action.items, state.captureContext),
+          ),
         },
       };
     case 'removeItem':
@@ -245,6 +271,21 @@ function reducer(state: State, action: Action): State {
     case 'newBatch':
       return { ...state, batch: emptyBatch() };
   }
+}
+
+/** Items inherit the room / asset type selected before the scanner was started. */
+export function stampContext(
+  items: ScanItem[],
+  context: CaptureContext | null,
+): ScanItem[] {
+  if (!context) {
+    return items;
+  }
+  return items.map(item => ({
+    ...item,
+    location: item.location ?? context.location,
+    assetType: item.assetType ?? context.assetType,
+  }));
 }
 
 export function tagToItem(
@@ -288,6 +329,8 @@ interface AppContextValue extends State {
   newBatch: () => void;
   sendBatch: () => Promise<void>;
   refreshReaderInfo: () => Promise<void>;
+  syncStructure: (full?: boolean) => Promise<void>;
+  setCaptureContext: (context: CaptureContext | null) => void;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -300,17 +343,24 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     readerInfo: {},
     batch: emptyBatch(),
     history: [],
+    structure: null,
+    assetTypes: [],
+    captureContext: null,
   });
   const stateRef = useRef(state);
   stateRef.current = state;
 
   useEffect(() => {
     (async () => {
-      const [settings, batch, history] = await Promise.all([
-        store.loadSettings(),
-        store.loadBatch(),
-        store.loadHistory(),
-      ]);
+      const [settings, batch, history, structure, assetTypes, captureContext] =
+        await Promise.all([
+          store.loadSettings(),
+          store.loadBatch(),
+          store.loadHistory(),
+          store.loadStructure(),
+          store.loadAssetTypes(),
+          store.loadCaptureContext(),
+        ]);
       debugLog.setEnabled(settings.debugEnabled);
       // A batch interrupted mid-send is still pending on the device: let the user resend it.
       const restored =
@@ -321,7 +371,15 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
               lastError: 'Envio interrompido',
             }
           : batch;
-      dispatch({ type: 'loaded', settings, batch: restored, history });
+      dispatch({
+        type: 'loaded',
+        settings,
+        batch: restored,
+        history,
+        structure,
+        assetTypes,
+        captureContext,
+      });
       reader
         .init()
         .catch(e => debugLog.log('app', 'err', 'reader.init', String(e)));
@@ -340,6 +398,12 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       store.saveBatch(state.batch);
     }
   }, [state.ready, state.batch]);
+
+  useEffect(() => {
+    if (state.ready) {
+      store.saveCaptureContext(state.captureContext);
+    }
+  }, [state.ready, state.captureContext]);
 
   useEffect(() => {
     if (state.ready) {
@@ -411,6 +475,37 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  /** Downloads the location tree (incremental unless `full`) and the asset types for offline use. */
+  const syncStructure = useCallback(async (full = false) => {
+    const { settings, structure: cached } = stateRef.current;
+    const since = !full && cached ? cached.serverTime : undefined;
+    const [{ data: tree }, { data: types }] = await Promise.all([
+      serviceNow.getStructure(settings, since),
+      serviceNow.getAssetTypes(settings),
+    ]);
+    const structure = mergeStructure(
+      cached,
+      {
+        root: tree.root,
+        serverTime: tree.server_time,
+        syncedAt: '',
+        locations: tree.locations,
+      },
+      !since,
+    );
+    const assetTypes = [...types.types].sort((a, b) => a.order - b.order);
+    await Promise.all([
+      store.saveStructure(structure),
+      store.saveAssetTypes(assetTypes),
+    ]);
+    dispatch({ type: 'synced', structure, assetTypes });
+    debugLog.log('app', 'info', 'Estrutura sincronizada', {
+      locations: structure.locations.length,
+      assetTypes: assetTypes.length,
+      incremental: !!since,
+    });
+  }, []);
+
   // Stable identities: screens subscribe to reader events with these in effect deps.
   const actions = useMemo(
     () => ({
@@ -424,13 +519,21 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       removeItem: (id: string) => dispatch({ type: 'removeItem', id }),
       setNotes: (notes: string) => dispatch({ type: 'notes', notes }),
       newBatch: () => dispatch({ type: 'newBatch' }),
+      setCaptureContext: (context: CaptureContext | null) =>
+        dispatch({ type: 'captureContext', context }),
     }),
     [],
   );
 
   const value = useMemo<AppContextValue>(
-    () => ({ ...state, ...actions, sendBatch, refreshReaderInfo }),
-    [state, actions, sendBatch, refreshReaderInfo],
+    () => ({
+      ...state,
+      ...actions,
+      sendBatch,
+      refreshReaderInfo,
+      syncStructure,
+    }),
+    [state, actions, sendBatch, refreshReaderInfo, syncStructure],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

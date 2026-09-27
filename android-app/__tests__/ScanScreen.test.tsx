@@ -1,8 +1,8 @@
 import React from 'react';
-import { DeviceEventEmitter } from 'react-native';
+import { DeviceEventEmitter, Text } from 'react-native';
 import ReactTestRenderer from 'react-test-renderer';
 import Native from '../specs/NativeChainwayRfid';
-import { ScanScreen } from '../src/screens/ScanScreen';
+import { ScannerView } from '../src/screens/ScanScreen';
 import { AppStateProvider } from '../src/state/AppState';
 
 const flush = () => new Promise<void>(resolve => setImmediate(resolve));
@@ -25,7 +25,7 @@ test('continuous inventory keeps running while tags arrive', async () => {
   await ReactTestRenderer.act(async () => {
     tree = ReactTestRenderer.create(
       <AppStateProvider>
-        <ScanScreen />
+        <ScannerView onChangeSelection={() => undefined} />
       </AppStateProvider>,
     );
     await flush();
@@ -57,7 +57,10 @@ test('continuous inventory keeps running while tags arrive', async () => {
   }
 
   expect(Native.stopInventory).not.toHaveBeenCalled();
-  const text = JSON.stringify(tree!.toJSON());
+  const text = tree!.root
+    .findAllByType(Text)
+    .map(t => [].concat(t.props.children).join(''))
+    .join('\n');
   expect(text).toContain('A832D5983288D7ED7271F12D');
   expect(text).toContain('3 RFID');
 

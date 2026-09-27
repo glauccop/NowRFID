@@ -1,4 +1,5 @@
 import React from 'react';
+import { useApp } from '../state/AppState';
 import { Pressable, Text, View } from 'react-native';
 import type { ScanItem } from '../types';
 import { Badge, colors, styles } from '../ui/components';
@@ -16,6 +17,15 @@ export function ItemRow({
   item: ScanItem;
   onRemove?: () => void;
 }) {
+  const { assetTypes, structure } = useApp();
+  const type = assetTypes.find(t => t.sys_id === item.assetType);
+  const room = structure?.locations.find(l => l.sys_id === item.location);
+  const where = [
+    type ? `${type.icon} ${type.name}` : item.location ? '❔ sem tipo' : '',
+    room?.name,
+  ]
+    .filter(Boolean)
+    .join(' · ');
   const main = item.captureType === 'rfid' ? item.epc : item.barcodeValue;
   const sub =
     item.captureType === 'rfid'
@@ -39,6 +49,7 @@ export function ItemRow({
           {main}
         </Text>
         <Text style={styles.muted}>{sub}</Text>
+        {!!where && <Text style={styles.muted}>{where}</Text>}
       </View>
       <View style={{ alignItems: 'flex-end', gap: 4 }}>
         <Badge

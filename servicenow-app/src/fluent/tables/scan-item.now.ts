@@ -7,19 +7,20 @@ import {
     IntegerColumn,
 } from '@servicenow/sdk/core'
 
-export const x_nowrfid_scan_item = Table({
-    name: 'x_nowrfid_scan_item',
+export const x_snc_nowrfid_scan_item = Table({
+    name: 'x_snc_nowrfid_scan_item',
     label: 'Scan Item',
     display: 'epc',
     allowWebServiceAccess: true,
     index: [
         { name: 'epc_idx', unique: false, element: 'epc' },
         { name: 'barcode_value_idx', unique: false, element: 'barcode_value' },
+        { name: 'classification_idx', unique: false, element: 'classification_status' },
     ],
     schema: {
         batch: ReferenceColumn({
             label: 'Batch',
-            referenceTable: 'x_nowrfid_scan_batch',
+            referenceTable: 'x_snc_nowrfid_scan_batch',
             mandatory: true,
             cascadeRule: 'delete',
         }),
@@ -63,5 +64,20 @@ export const x_nowrfid_scan_item = Table({
             },
         }),
         matched_asset: ReferenceColumn({ label: 'Matched Asset', referenceTable: 'alm_asset' }),
+        location: ReferenceColumn({ label: 'Local', referenceTable: 'cmn_location' }),
+        asset_type: ReferenceColumn({ label: 'Tipo de bem', referenceTable: 'x_snc_nowrfid_asset_type' }),
+        classification_status: ChoiceColumn({
+            label: 'Classificação',
+            dropdown: 'dropdown_without_none',
+            default: 'pending',
+            choices: {
+                pending: { label: 'Pendente', sequence: 10 },
+                classified: { label: 'Classificado', sequence: 20 },
+                promoted: { label: 'Ativo criado', sequence: 30 },
+                ignored: { label: 'Ignorado', sequence: 40 },
+            },
+        }),
+        promoted_asset: ReferenceColumn({ label: 'Ativo criado', referenceTable: 'alm_asset' }),
+        model: ReferenceColumn({ label: 'Modelo', referenceTable: 'cmdb_model' }),
     },
 })

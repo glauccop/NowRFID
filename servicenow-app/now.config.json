@@ -1,5 +1,5 @@
 {
-    "scope": "x_nowrfid",
+    "scope": "x_snc_nowrfid",
     "scopeId": "681aa464871a4b47bffe9fb33334cdd3",
     "name": "NowRFID",
     "tsconfigPath": "./src/server/tsconfig.json"

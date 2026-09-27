@@ -7,8 +7,8 @@ import {
     IntegerColumn,
 } from '@servicenow/sdk/core'
 
-export const x_nowrfid_scan_batch = Table({
-    name: 'x_nowrfid_scan_batch',
+export const x_snc_nowrfid_scan_batch = Table({
+    name: 'x_snc_nowrfid_scan_batch',
     label: 'Scan Batch',
     display: 'number',
     allowWebServiceAccess: true,
@@ -50,6 +50,16 @@ export const x_nowrfid_scan_batch = Table({
         }),
         item_count: IntegerColumn({ label: 'Item Count', default: '0' }),
         location: ReferenceColumn({ label: 'Location', referenceTable: 'cmn_location' }),
+        asset_type: ReferenceColumn({ label: 'Tipo de bem', referenceTable: 'x_snc_nowrfid_asset_type' }),
+        source: ChoiceColumn({
+            label: 'Source',
+            dropdown: 'dropdown_without_none',
+            default: 'app',
+            choices: {
+                app: { label: 'App', sequence: 10 },
+                system: { label: 'System', sequence: 20 },
+            },
+        }),
         department: ReferenceColumn({ label: 'Department', referenceTable: 'cmn_department' }),
     },
 })

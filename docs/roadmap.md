@@ -2,7 +2,7 @@
 
 ## Fase 1 — MVP (em construção)
 
-App Android (React Native + TS + bridge Kotlin ao SDK Chainway) com leitura RFID, gravação/encode, lock/kill/erase, config de RF, barcode/QR e console de debug; envio de lotes para o app escopado `x_nowrfid` (staging + Scripted REST API).
+App Android (React Native + TS + bridge Kotlin ao SDK Chainway) com leitura RFID, gravação/encode, lock/kill/erase, config de RF, barcode/QR e console de debug; envio de lotes para o app escopado `x_snc_nowrfid` (staging + Scripted REST API).
 
 ## Fase 2 — Reconciliação / promoção para EAM
 
@@ -10,7 +10,7 @@ Ferramenta administrativa no app escopado para casar `Scan Item` com `alm_asset`
 
 ## Fase 3 — Hierarquia de localização no app
 
-Ler `cmn_location` (árvore via `parent`, tipo via `cmn_location_type`) e `cmn_department` pela Table API (GET) com cache offline; o operador escolhe prédio › andar › sala / departamento antes de capturar. O lote passa a enviar `location`/`department` (colunas já existentes em `x_nowrfid_scan_batch`), e a promoção da Fase 2 copia para o ativo.
+Ler `cmn_location` (árvore via `parent`, tipo via `cmn_location_type`) e `cmn_department` pela Table API (GET) com cache offline; o operador escolhe prédio › andar › sala / departamento antes de capturar. O lote passa a enviar `location`/`department` (colunas já existentes em `x_snc_nowrfid_scan_batch`), e a promoção da Fase 2 copia para o ativo.
 
 ## Fase 4 — Consulta de ativos a partir do app
 

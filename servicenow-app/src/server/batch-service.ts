@@ -1,7 +1,7 @@
 import { gs, GlideRecord, GlideDateTime } from '@servicenow/glide'
 
-const BATCH_TABLE = 'x_nowrfid_scan_batch'
-const ITEM_TABLE = 'x_nowrfid_scan_item'
+const BATCH_TABLE = 'x_snc_nowrfid_scan_batch'
+const ITEM_TABLE = 'x_snc_nowrfid_scan_item'
 const CAPTURE_TYPES = ['rfid', 'barcode', 'qr']
 const OPERATIONS = ['read', 'write']
 
@@ -12,6 +12,8 @@ export interface BatchPayload {
     captured_at?: string
     app_version?: string
     notes?: string
+    location?: string
+    asset_type?: string
 }
 
 export interface ItemPayload {
@@ -27,6 +29,8 @@ export interface ItemPayload {
     symbology?: string
     captured_at?: string
     raw_payload?: string | object
+    location?: string
+    asset_type?: string
 }
 
 export interface SubmitResult {
@@ -36,6 +40,8 @@ export interface SubmitResult {
         batch_number?: string
         items_created?: number
         duplicate?: boolean
+        pending?: number
+        classified?: number
         errors: { client_item_id: string; message: string }[]
         error?: string
     }
@@ -68,6 +74,20 @@ export function isoToGlideUtc(iso?: string): string {
     const gdt = new GlideDateTime()
     gdt.setValueUTC(value, 'yyyy-MM-dd HH:mm:ss')
     return gdt.isValid() ? gdt.getValue() : ''
+}
+
+/** Returns a checker telling whether a sys_id exists in a table, memoised for one request. Empty = valid "no reference". */
+function makeRefChecker() {
+    const cache: { [key: string]: boolean } = {}
+    return (table: string, sysId: string): boolean => {
+        if (!sysId) return true
+        const key = table + ':' + sysId
+        if (cache[key] === undefined) {
+            const gr = new GlideRecord(table)
+            cache[key] = gr.get(sysId)
+        }
+        return cache[key]
+    }
 }
 
 function findBatch(clientBatchId: string): GlideRecord | null {
@@ -122,6 +142,18 @@ export function submitBatch(payload: any): SubmitResult {
     b.setValue('reader_mac', str(batch.reader_mac, 40))
     b.setValue('app_version', str(batch.app_version, 40))
     b.setValue('notes', str(batch.notes, 1000))
+    const refExists = makeRefChecker()
+    const batchLocation = str(batch.location, 32)
+    const batchAssetType = str(batch.asset_type, 32)
+    if (!refExists('cmn_location', batchLocation)) {
+        return { status: 400, body: { errors, error: 'batch.location not found: ' + batchLocation } }
+    }
+    if (!refExists('x_snc_nowrfid_asset_type', batchAssetType)) {
+        return { status: 400, body: { errors, error: 'batch.asset_type not found: ' + batchAssetType } }
+    }
+    if (batchLocation) b.setValue('location', batchLocation)
+    if (batchAssetType) b.setValue('asset_type', batchAssetType)
+    b.setValue('source', 'app')
     b.setValue('operator', gs.getUserID())
     b.setValue('status', 'new')
     const capturedAt = isoToGlideUtc(batch.captured_at)
@@ -133,6 +165,8 @@ export function submitBatch(payload: any): SubmitResult {
     }
 
     let created = 0
+    let pending = 0
+    let classified = 0
     for (let i = 0; i < items.length; i++) {
         const it = items[i] || {}
         const clientItemId = str(it.client_item_id, 64) || 'index:' + i
@@ -154,8 +188,21 @@ export function submitBatch(payload: any): SubmitResult {
             errors.push({ client_item_id: clientItemId, message: 'barcode_value is required for barcode/qr items' })
             continue
         }
+        const itemLocation = str(it.location, 32) || batchLocation
+        const itemAssetType = str(it.asset_type, 32) || batchAssetType
+        if (!refExists('cmn_location', itemLocation)) {
+            errors.push({ client_item_id: clientItemId, message: 'location not found: ' + itemLocation })
+            continue
+        }
+        if (!refExists('x_snc_nowrfid_asset_type', itemAssetType)) {
+            errors.push({ client_item_id: clientItemId, message: 'asset_type not found: ' + itemAssetType })
+            continue
+        }
         const gr = new GlideRecord(ITEM_TABLE)
         gr.initialize()
+        if (itemLocation) gr.setValue('location', itemLocation)
+        if (itemAssetType) gr.setValue('asset_type', itemAssetType)
+        gr.setValue('classification_status', itemAssetType ? 'classified' : 'pending')
         gr.setValue('batch', batchSysId)
         gr.setValue('client_item_id', clientItemId)
         gr.setValue('capture_type', captureType)
@@ -174,6 +221,8 @@ export function submitBatch(payload: any): SubmitResult {
         gr.setValue('match_status', 'unmatched')
         if (gr.insert()) {
             created++
+            if (itemAssetType) classified++
+            else pending++
         } else {
             errors.push({ client_item_id: clientItemId, message: 'insert failed' })
         }
@@ -190,6 +239,8 @@ export function submitBatch(payload: any): SubmitResult {
             batch_number: b.getValue('number'),
             items_created: created,
             duplicate: false,
+            pending,
+            classified,
             errors,
         },
     }

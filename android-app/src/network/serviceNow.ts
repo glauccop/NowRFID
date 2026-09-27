@@ -1,5 +1,11 @@
 import { debugLog } from '../debug/debugLog';
-import type { ScanBatch, ScanItem, Settings } from '../types';
+import type {
+  AssetType,
+  LocationNode,
+  ScanBatch,
+  ScanItem,
+  Settings,
+} from '../types';
 import { base64 } from '../utils/ids';
 
 export const APP_VERSION = '0.1.0';
@@ -239,12 +245,34 @@ function toApiItem(item: ScanItem) {
     barcode_value: item.barcodeValue ?? '',
     symbology: item.symbology ?? '',
     captured_at: item.capturedAt,
+    location: item.location ?? '',
+    asset_type: item.assetType ?? '',
     raw_payload: JSON.stringify(item.raw),
   };
 }
 
+export interface StructureResult {
+  root: string;
+  server_time: string;
+  locations: LocationNode[];
+}
+
+export interface AssetTypesResult {
+  types: AssetType[];
+}
+
 export const serviceNow = {
   ping: (settings: Settings) => api<PingResult>(settings, 'GET', '/ping'),
+
+  getStructure: (settings: Settings, since?: string) =>
+    api<StructureResult>(
+      settings,
+      'GET',
+      `/structure${since ? `?since=${encodeURIComponent(since)}` : ''}`,
+    ),
+
+  getAssetTypes: (settings: Settings) =>
+    api<AssetTypesResult>(settings, 'GET', '/asset-types'),
 
   sendBatch: (
     settings: Settings,
