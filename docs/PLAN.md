@@ -4,7 +4,7 @@ Atualizado em 27/09/2026. Histórico de decisões e status por fase. Roadmap res
 
 ## Situação atual e pendências
 
-Ponto de parada em 27/09/2026 (último commit `e79e100`). Tudo o que foi construído está commitado; nada foi deixado pela metade no código.
+Ponto de parada em 27/09/2026 (último commit de código `ff4a5a6`). Tudo o que foi construído está commitado e publicado no GitHub; nada foi deixado pela metade no código.
 
 **Onde está cada coisa**
 
@@ -14,12 +14,12 @@ Ponto de parada em 27/09/2026 (último commit `e79e100`). Tudo o que foi constru
 | App ServiceNow `x_snc_nowrfid` | Instalado em `demoalectriallwfab151756`: staging, tipos de bem, etiquetas, API, **Criar ativos** e painel |
 | Massa de demo na instância | Árvore "UG 100001 – Brasília (NowRFID)" (28 locais), 20 tipos, 10 ativos, 5 lotes / 41 itens "NowRFID demo", usuário `nowrfid.integration` |
 | Testes automatizados | 19 Jest passando, `tsc` e lint limpos; `npm run build` do servicenow-app ok |
-| Git | 4 commits **locais, sem push**: `706e711`, `c731051`, `00454da`, `e79e100` |
+| Git | Tudo publicado em `origin/main` (push em 27/09) |
 
 **Pendências, em ordem sugerida**
 
 1. **Git e nomes**
-   - [ ] `git push` dos 4 commits locais.
+   - [x] `git push` (27/09).
    - [ ] Renomear o repositório no GitHub e a pasta raiz para `NowRFID`; depois `git remote set-url origin …` e atualizar a cópia no Ubuntu (`~/NowRFID/<pasta>`).
 2. **Validação no ServiceNow (logado como admin)** — casos em [`test-cases.md`](test-cases.md) §6 e §8
    - [ ] Abrir o painel `/x_snc_nowrfid_painel.do` e conferir KPIs, drill-down e visual claro/escuro (TC-50 a TC-54).
