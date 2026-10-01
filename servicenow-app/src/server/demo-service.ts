@@ -1,7 +1,7 @@
 import { gs, GlideRecord, GlideDateTime } from '@servicenow/glide'
 import { submitBatch } from './batch-service.ts'
 import { promoteItem } from './promote-service.ts'
-import { ensureAssetTypes } from './asset-type-service.ts'
+import { ensureAssetTypes, syncAssetTypes } from './asset-type-service.ts'
 import { entityTree, getStockrooms } from './structure-service.ts'
 
 /** Every demo batch carries this device id; that is how the demo data is found and removed. */
@@ -288,4 +288,10 @@ export function seedDemoAction() {
 export function removeDemoAction() {
     const r = removeDemoData()
     gs.addInfoMessage('NowRFID: massa de demonstração removida — ' + r.batches + ' lotes, ' + r.assets + ' ativos, ' + r.tags + ' etiquetas')
+}
+
+/** Scheduled one-off: refresh the types (SIAF fix) and seed the demo. */
+export function syncAndSeed() {
+    gs.info('NowRFID sync: ' + JSON.stringify(syncAssetTypes()))
+    gs.info('NowRFID seed: ' + JSON.stringify(seedDemoData()))
 }

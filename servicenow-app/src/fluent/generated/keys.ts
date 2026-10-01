@@ -52,7 +52,7 @@ declare global {
                     'nowrfid-demo-seed-once': {
                         table: 'sysauto_script'
                         id: '29a180e0a7ea4c0f96e05b6df669f3b9'
-                        deleted: true
+                        deleted: false
                     }
                     'nowrfid-menu': {
                         table: 'sys_app_application'
