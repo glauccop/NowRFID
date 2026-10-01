@@ -1,6 +1,6 @@
 # NowRFID — Plano de execução
 
-Atualizado em 27/09/2026. Histórico de decisões e status por fase. Roadmap resumido em [`roadmap.md`](roadmap.md); casos de teste em [`test-cases.md`](test-cases.md).
+Atualizado em 30/09/2026. Histórico de decisões e status por fase. Roadmap resumido em [`roadmap.md`](roadmap.md); casos de teste em [`test-cases.md`](test-cases.md).
 
 ## Situação atual e pendências
 
@@ -152,6 +152,52 @@ Um painel dentro do app escopado para acompanhar a operação, com **aparência 
 
 **Aceite:** o painel abre em menos de 3 s com a massa de demo; os números batem com as listas; o drill-down chega à sala; o visual foi revisado contra o Horizon (cores, espaçamento, tipografia) nos temas claro e escuro.
 
+## Fase 2.6 — Dados reais do cliente (TJDFT) ✅ código concluído, ⏳ validação na instância pendente (30/09)
+
+Nova instância: **`demoalectriallwfab151743`** (perfil now-sdk `tjdft`), com a carga do TJDFT. O app NowRFID foi instalado nela em 30/09 (rollback `sys_rollback_context.do?sys_id=9bf2b95f2b6b431029d0ffd34391bfc6`). O plano de PoC do cliente (`material-referencia/`) cobre bens de consumo, que são EAM nativo. O papel do NowRFID é a **entrada e etiquetagem de bens permanentes** em uma localidade ou almoxarifado real do cliente.
+
+**O que a instância tem (inspeção de 30/09)**
+
+| Dado | Achado |
+|---|---|
+| `u_siaf_codigos` | `u_codigo_raw` (conta), `u_descricao`, `u_vida_util_anos`, `u_valor_residual_pct`. Contas `1231…` são bens permanentes (48); `00339030…` são consumo. Grupo/subgrupo estão no próprio código. |
+| `u_codigo_siaf` | Referência a `u_siaf_codigos` em `sn_ent_model`, `cmdb_hardware_product_model`, `sn_ent_facility_asset`, `alm_hardware`, `alm_consumable`. |
+| Job "Atualiza tempo de Depreciacao de acordo com o codigo SIAF" (semanal) | Em `alm_hardware` e `sn_ent_facility_asset` com `u_codigo_siaf`, aplica `cmdb_depreciation` "SIAF SL nn Anos" e `depreciation_date = install_date`. |
+| Ativos | Mobiliário/livros em `sn_ent_facility_asset` (488); TI em `alm_hardware` (155). Patrimônio em `asset_tag`: 6 dígitos com zeros à esquerda, máximo `323497`, sem contador. |
+| Locais | `…/Brasil/Distrito Federal/<cidade>/<entidade>/<sala>`. Entidade = código de 11 dígitos. Só **5 entidades** têm salas (6 salas; Taguatinga tem prédio › andar › sala). ~1.700 salas soltas na cidade. Quase nenhum `cmn_location_type`. |
+| Almoxarifados | 5 do TJDFT em `alm_stockroom` (AMXCENT, AMXDIST, AMXNGC, AMXBSED, ALMXBSIA) + 1 de demo OOB. |
+| Categorias | 26 categorias com modelo ou ativo em conta `1231…` (mobiliário, doméstico, TI, áudio/vídeo, livro, bebedouro, ferramenta, fragmentadora). O SIAF é do **modelo**, não da categoria (MESA tem `123110303` e `123110405`); Computer e IP Phone só têm SIAF nos ativos. |
+
+**Decisões (30/09, aprovadas pelo usuário)**
+
+1. **Número de patrimônio: o ServiceNow numera na criação do ativo.** Contador do escopo, começando em `323498`, com 6 dígitos; rejeita número repetido. O app nunca gera número: com coletores offline haveria colisão, e reserva de faixas deixa buracos que a auditoria questiona. O número nasce no tombamento (EAM). Depois de criado, o app mostra o número e pode gravá-lo na tag quando online.
+   - **Bem que já tem patrimônio:** o app lê a plaqueta antiga (código de barras) + a tag e só **vincula** a tag ao ativo existente.
+2. **Locais:** só entram entidades (código de 11 dígitos) e seus descendentes. Sala solta fica de fora. Para mais salas na demo, pendurá-las numa entidade no ServiceNow.
+3. **Tipos de bem importados das categorias:** a tabela `x_snc_nowrfid_asset_type` é preenchida por uma sincronização a partir das categorias com conta SIAF `1231…` (classe do ativo vem da categoria). Categoria nova do cliente entra sem mudar código.
+4. **Modelo e SIAF:** no app, categoria → modelo; o `u_codigo_siaf` do ativo vem do modelo escolhido (ou, sem modelo, da conta predominante da categoria). `install_date` = data da criação, para o job de depreciação.
+5. **Destino:** sala (`install_status` em uso) ou almoxarifado (em estoque + `stockroom`).
+6. **Duplicidade:** UHF responde várias vezes por segundo; o app já junta por EPC (uma linha, contador "N leituras"). O risco real era o servidor criar um segundo ativo para um EPC já vinculado: passa a marcar "já cadastrada" no envio e, ao criar ativos, só atualizar o local do ativo existente.
+
+**Implementado (30/09)**
+
+- **Servidor** (instalado na `…151743`):
+  - `asset-type-service.ts`: sincronização categorias → tipos de bem, com SIAF e modelos. Roda sozinha no primeiro `GET /asset-types`; depois, pelo botão **Sincronizar com categorias** na lista de tipos ou por `POST /asset-types/sync`.
+  - `structure-service.ts`: modo entidade (quando `x_snc_nowrfid.location_root` está vazio), mais a lista de almoxarifados.
+  - `asset-tag-service.ts` e a tabela `x_snc_nowrfid_counter`: número de patrimônio.
+  - `promote-service.ts`: tag já cadastrada, vínculo de plaqueta, classe, SIAF, `install_date` e status em uso/em estoque.
+  - Criação automática dos ativos no envio (`x_snc_nowrfid.auto_promote`, padrão `true`), com o resultado de cada item devolvido ao app.
+- **App:** destino sala/almoxarifado; tipo → modelo com a conta SIAF; modo "Já tem plaqueta" (código de barras → tag); "N leituras"; números de patrimônio no resumo do envio e no histórico. 23 testes Jest passando, `tsc` limpo; APK gerado no Ubuntu (`~/NowRFID/NowRFID.apk`).
+
+**Propriedades opcionais (todas têm padrão no código):** `entity_pattern` (`^\d{11} - `), `stockroom_query` (`nameSTARTSWITHALMOX`), `siaf_prefix` (`1231`), `asset_tag_start` (`323498`), `auto_promote` (`true`), todas com o prefixo `x_snc_nowrfid.`.
+
+**Pendente**
+
+- [ ] Validar as rotas na instância: `/structure` (5 entidades, 6 salas, 5 almoxarifados) e `/asset-types` (26 tipos). Ainda não foram chamadas: o Chrome não estava conectado e não há credencial de REST fora do now-sdk.
+- [ ] Criar o usuário de integração na `…151743` (role `x_snc_nowrfid.integration`), ou usar o admin na PoC.
+- [ ] Teste em campo: bem novo numa sala, bem novo em almoxarifado, plaqueta existente (ex.: `049567`) e releitura de uma tag já cadastrada.
+- [ ] Gravar o número de patrimônio na tag depois de criado (opcional; hoje a ligação tag ↔ ativo fica na tabela de etiquetas).
+- [ ] Commit das mudanças. A cópia no Ubuntu recebeu os arquivos por `rsync`: fazer `git checkout .` lá antes do próximo `git pull`.
+
 ## Fase 3 — Levantamento patrimonial (próxima)
 
 É a conferência de inventário no padrão do sistema antigo. O desenho parte da análise dos exports reais em [`legacy-inventory-export.md`](legacy-inventory-export.md).
@@ -182,5 +228,5 @@ Ver [`roadmap.md`](roadmap.md): catálogo offline no app (Fase 4), consulta de a
 | Código | repositório **NowRFID** no GitHub (`glauccop`), branch `main` — renomeação do repositório e da pasta raiz pendente pelo usuário |
 | Build do APK | Ubuntu `glaucco@192.168.1.250`: `<raiz do repositório>/android-app/android && ./gradlew assembleRelease` → `~/NowRFID/NowRFID.apk` |
 | Distribuição | `cd ~/NowRFID/download && python3 -m http.server 8000` → `http://192.168.1.250:8000/NowRFID.apk` |
-| Deploy ServiceNow | `cd servicenow-app && npm run build && npx now-sdk install --auth demoalectri` |
+| Deploy ServiceNow | `cd servicenow-app && npm run build && npx now-sdk install --auth tjdft` (TJDFT, `…151743`) ou `--auth demoalectri` (demo antiga, `…151756`) |
 | Credencial de integração | usuário `nowrfid.integration`; senha **fora do repositório** |

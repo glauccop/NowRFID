@@ -17,6 +17,10 @@ declare global {
                         table: 'sys_ws_operation'
                         id: 'c1e3f5fe0dee489180d78bdf99cab7ad'
                     }
+                    'nowrfid-api-asset-types-sync': {
+                        table: 'sys_ws_operation'
+                        id: 'f6d7f9074d694193b565b18fa8e7aa1a'
+                    }
                     'nowrfid-api-batch': {
                         table: 'sys_ws_operation'
                         id: 'e9c451c4f78d47c4a31d5fcbbbba6f0b'
@@ -90,6 +94,10 @@ declare global {
                         table: 'sys_ui_action'
                         id: '77db59e237a64350ae2a999f43693388'
                     }
+                    'nowrfid-ua-sync-asset-types': {
+                        table: 'sys_ui_action'
+                        id: 'e1c9fedfd3c34464bd2d9225a296764a'
+                    }
                     'nowrfid-xscope-alm_asset-create': {
                         table: 'sys_scope_privilege'
                         id: 'c44c0006d2b3449ebeb9d3fee5ae2044'
@@ -113,6 +121,14 @@ declare global {
                     'nowrfid-xscope-alm_hardware-write': {
                         table: 'sys_scope_privilege'
                         id: 'acd1c4e9e7264489b7aed63f6377caa1'
+                    }
+                    'nowrfid-xscope-alm_stockroom-read': {
+                        table: 'sys_scope_privilege'
+                        id: '5c6c82bafd8641d6bf8fb39e85d8c6aa'
+                    }
+                    'nowrfid-xscope-cmdb_hardware_product_model-read': {
+                        table: 'sys_scope_privilege'
+                        id: 'afdd7fcb477642c2b4bda197ddef7d09'
                     }
                     'nowrfid-xscope-cmdb_model_category-read': {
                         table: 'sys_scope_privilege'
@@ -150,9 +166,25 @@ declare global {
                         table: 'sys_scope_privilege'
                         id: '58e787a5a4834d7ea073d9c962763d4a'
                     }
+                    'nowrfid-xscope-sn_ent_model-read': {
+                        table: 'sys_scope_privilege'
+                        id: 'e55f77f0b06c4a089fda8e98387f514f'
+                    }
+                    'nowrfid-xscope-u_siaf_codigos-read': {
+                        table: 'sys_scope_privilege'
+                        id: '84e232e854a84d08b9bf9e88cb9aea77'
+                    }
                     package_json: {
                         table: 'sys_module'
                         id: '2cce1c234bc940a79748279875566cd9'
+                    }
+                    'src_server_asset-tag-service_ts': {
+                        table: 'sys_module'
+                        id: '0f51194bdcc549cab77a76a5ba3090d7'
+                    }
+                    'src_server_asset-type-service_ts': {
+                        table: 'sys_module'
+                        id: 'd114dce99b884154b4e28d803702cd68'
                     }
                     'src_server_batch-service_ts': {
                         table: 'sys_module'
@@ -189,6 +221,18 @@ declare global {
                     'x_snc_nowrfid_asset_type-write': {
                         table: 'sys_security_acl'
                         id: '7decff96420e4035a47802af83a8849d'
+                    }
+                    'x_snc_nowrfid_counter-create': {
+                        table: 'sys_security_acl'
+                        id: '686c2c3557034e97807568ed6296e111'
+                    }
+                    'x_snc_nowrfid_counter-read': {
+                        table: 'sys_security_acl'
+                        id: '59982d72fb704701893c34584b0fb542'
+                    }
+                    'x_snc_nowrfid_counter-write': {
+                        table: 'sys_security_acl'
+                        id: 'f3e6d020f500439a918352672b50fc8d'
                     }
                     'x_snc_nowrfid_scan_batch-create': {
                         table: 'sys_security_acl'
@@ -260,6 +304,14 @@ declare global {
                         }
                     },
                     {
+                        table: 'sys_choice_set'
+                        id: '01cd003a882049a89feb03d3a0073ecf'
+                        key: {
+                            name: 'x_snc_nowrfid_asset_type'
+                            element: 'source'
+                        }
+                    },
+                    {
                         table: 'sys_choice'
                         id: '01ea1b27c42b49ae9a91e274831fbcac'
                         key: {
@@ -268,6 +320,24 @@ declare global {
                             value: 'matched'
                             language: 'en'
                             dependent_value: 'NULL'
+                        }
+                    },
+                    {
+                        table: 'sys_documentation'
+                        id: '02700cedf3d24470aa9fe10c8290a083'
+                        key: {
+                            name: 'x_snc_nowrfid_counter'
+                            element: 'NULL'
+                            language: 'en'
+                        }
+                    },
+                    {
+                        table: 'sys_documentation'
+                        id: '0310b001b4634e39aa8e2baf0e9e5c24'
+                        key: {
+                            name: 'x_snc_nowrfid_scan_item'
+                            element: 'stockroom'
+                            language: 'en'
                         }
                     },
                     {
@@ -379,6 +449,17 @@ declare global {
                             name: 'x_snc_nowrfid_scan_item'
                             element: 'location'
                             language: 'en'
+                        }
+                    },
+                    {
+                        table: 'sys_choice'
+                        id: '10e632c4af1646eda582095f947187d0'
+                        key: {
+                            name: 'x_snc_nowrfid_asset_type'
+                            element: 'source'
+                            value: 'manual'
+                            language: 'en'
+                            dependent_value: 'NULL'
                         }
                     },
                     {
@@ -517,6 +598,27 @@ declare global {
                             name: 'x_snc_nowrfid_scan_batch'
                             element: 'received_at'
                             language: 'en'
+                        }
+                    },
+                    {
+                        table: 'sys_dictionary'
+                        id: '2a6149c880a14c9b90646f395c10dd45'
+                        key: {
+                            name: 'x_snc_nowrfid_counter'
+                            element: 'NULL'
+                        }
+                    },
+                    {
+                        table: 'sys_ui_action_role'
+                        id: '2bd322a7d9da40f38375482976721132'
+                        key: {
+                            sys_ui_action: 'e1c9fedfd3c34464bd2d9225a296764a'
+                            sys_user_role: {
+                                id: '582295e5c272456d93b74ca14dd86597'
+                                key: {
+                                    name: 'x_snc_nowrfid.admin'
+                                }
+                            }
                         }
                     },
                     {
@@ -773,6 +875,14 @@ declare global {
                         }
                     },
                     {
+                        table: 'sys_index'
+                        id: '5503af5ede8644e292b0d8da17fad3e4'
+                        key: {
+                            logical_table_name: 'x_snc_nowrfid_counter'
+                            col_name_string: 'name'
+                        }
+                    },
+                    {
                         table: 'sys_choice'
                         id: '5530287461564688968d80cf360fb0bf'
                         key: {
@@ -822,6 +932,15 @@ declare global {
                         }
                     },
                     {
+                        table: 'sys_documentation'
+                        id: '5d658c8a36ac4d5e86d432950e7e169e'
+                        key: {
+                            name: 'x_snc_nowrfid_counter'
+                            element: 'digits'
+                            language: 'en'
+                        }
+                    },
+                    {
                         table: 'sys_choice'
                         id: '5d6ccbf4cb1645ff8066d180ebd6a9a9'
                         key: {
@@ -830,6 +949,14 @@ declare global {
                             value: 'new'
                             language: 'en'
                             dependent_value: 'NULL'
+                        }
+                    },
+                    {
+                        table: 'sys_dictionary'
+                        id: '5def42e210954936811ed8fca871a91b'
+                        key: {
+                            name: 'x_snc_nowrfid_scan_item'
+                            element: 'asset_tag'
                         }
                     },
                     {
@@ -901,6 +1028,14 @@ declare global {
                         }
                     },
                     {
+                        table: 'sys_dictionary'
+                        id: '6346d07005c74c7288da44b983efa827'
+                        key: {
+                            name: 'x_snc_nowrfid_counter'
+                            element: 'digits'
+                        }
+                    },
+                    {
                         table: 'sys_documentation'
                         id: '65137876ba7b43a1967d85447d613afc'
                         key: {
@@ -967,11 +1102,31 @@ declare global {
                         }
                     },
                     {
+                        table: 'sys_security_acl_role'
+                        id: '6f28bb4b7fb94df0aae68d59f718d8e9'
+                        key: {
+                            sys_security_acl: '59982d72fb704701893c34584b0fb542'
+                            sys_user_role: {
+                                id: '582295e5c272456d93b74ca14dd86597'
+                                key: {
+                                    name: 'x_snc_nowrfid.admin'
+                                }
+                            }
+                        }
+                    },
+                    {
                         table: 'sys_dictionary'
                         id: '71388770fad047fd91f5d2e19c0cd64e'
                         key: {
                             name: 'x_snc_nowrfid_asset_type'
                             element: 'icon'
+                        }
+                    },
+                    {
+                        table: 'ua_table_licensing_config'
+                        id: '72c5f2526a674d6c9ebf548fdcd8aeb5'
+                        key: {
+                            name: 'x_snc_nowrfid_counter'
                         }
                     },
                     {
@@ -1181,6 +1336,15 @@ declare global {
                     },
                     {
                         table: 'sys_documentation'
+                        id: '8ffd92d185b9434587e9fb8e60aaac01'
+                        key: {
+                            name: 'x_snc_nowrfid_counter'
+                            element: 'next_value'
+                            language: 'en'
+                        }
+                    },
+                    {
+                        table: 'sys_documentation'
                         id: '9058e37d716f41fbac2d86d51db3d144'
                         key: {
                             name: 'x_snc_nowrfid_scan_item'
@@ -1189,11 +1353,44 @@ declare global {
                         }
                     },
                     {
+                        table: 'sys_security_acl_role'
+                        id: '915c19c965da4682835b1aa648665ca7'
+                        key: {
+                            sys_security_acl: '686c2c3557034e97807568ed6296e111'
+                            sys_user_role: {
+                                id: '582295e5c272456d93b74ca14dd86597'
+                                key: {
+                                    name: 'x_snc_nowrfid.admin'
+                                }
+                            }
+                        }
+                    },
+                    {
                         table: 'sys_dictionary'
                         id: '9649df1ea7944a98a6bfaa407636a034'
                         key: {
                             name: 'x_snc_nowrfid_tag'
                             element: 'asset'
+                        }
+                    },
+                    {
+                        table: 'sys_documentation'
+                        id: '971bd26ea87947e4907569e985687b08'
+                        key: {
+                            name: 'x_snc_nowrfid_scan_item'
+                            element: 'result_message'
+                            language: 'en'
+                        }
+                    },
+                    {
+                        table: 'sys_choice'
+                        id: '971f6b349d7b4138a1ec75889d2116ea'
+                        key: {
+                            name: 'x_snc_nowrfid_scan_item'
+                            element: 'match_status'
+                            value: 'existing'
+                            language: 'en'
+                            dependent_value: 'NULL'
                         }
                     },
                     {
@@ -1370,6 +1567,15 @@ declare global {
                     },
                     {
                         table: 'sys_documentation'
+                        id: 'a6c3aa830db3424ea14da4dfe263c24d'
+                        key: {
+                            name: 'x_snc_nowrfid_scan_item'
+                            element: 'asset_tag'
+                            language: 'en'
+                        }
+                    },
+                    {
+                        table: 'sys_documentation'
                         id: 'a85c3864f64b404fbb922cf449171606'
                         key: {
                             name: 'x_snc_nowrfid_asset_type'
@@ -1484,6 +1690,15 @@ declare global {
                         }
                     },
                     {
+                        table: 'sys_documentation'
+                        id: 'b42e6da767f344d1add3237aaa9b5815'
+                        key: {
+                            name: 'x_snc_nowrfid_counter'
+                            element: 'name'
+                            language: 'en'
+                        }
+                    },
+                    {
                         table: 'sys_dictionary'
                         id: 'b4735467532f4ba19dbb8e28a2610c09'
                         key: {
@@ -1509,6 +1724,14 @@ declare global {
                         }
                     },
                     {
+                        table: 'sys_dictionary'
+                        id: 'baf59142b01b44978f851a755a17601d'
+                        key: {
+                            name: 'x_snc_nowrfid_counter'
+                            element: 'name'
+                        }
+                    },
+                    {
                         table: 'sys_choice'
                         id: 'bbb3cf8f372e49bf8e9955deecb04a5c'
                         key: {
@@ -1517,6 +1740,14 @@ declare global {
                             value: 'processed'
                             language: 'en'
                             dependent_value: 'NULL'
+                        }
+                    },
+                    {
+                        table: 'sys_dictionary'
+                        id: 'bbfa550fc02f4ac38cdc81b901dd8fd8'
+                        key: {
+                            name: 'x_snc_nowrfid_asset_type'
+                            element: 'source'
                         }
                     },
                     {
@@ -1584,6 +1815,14 @@ declare global {
                         }
                     },
                     {
+                        table: 'sys_dictionary'
+                        id: 'c5897bf411b74de09ee61ab1b312840f'
+                        key: {
+                            name: 'x_snc_nowrfid_scan_item'
+                            element: 'result_message'
+                        }
+                    },
+                    {
                         table: 'sys_index'
                         id: 'c59e527ec0fa4377870db537b49b0422'
                         key: {
@@ -1597,6 +1836,15 @@ declare global {
                         key: {
                             name: 'x_snc_nowrfid_scan_batch'
                             element: 'department'
+                            language: 'en'
+                        }
+                    },
+                    {
+                        table: 'sys_documentation'
+                        id: 'c78c333642394153bea3ea4fbde0127c'
+                        key: {
+                            name: 'x_snc_nowrfid_asset_type'
+                            element: 'siaf'
                             language: 'en'
                         }
                     },
@@ -1617,6 +1865,13 @@ declare global {
                             value: 'promoted'
                             language: 'en'
                             dependent_value: 'NULL'
+                        }
+                    },
+                    {
+                        table: 'sys_db_object'
+                        id: 'cb04fed8a20441ee8ced46a189232915'
+                        key: {
+                            name: 'x_snc_nowrfid_counter'
                         }
                     },
                     {
@@ -1665,10 +1920,31 @@ declare global {
                         }
                     },
                     {
+                        table: 'sys_dictionary'
+                        id: 'd27e3cd9cc254ec4b94508bcb51a629b'
+                        key: {
+                            name: 'x_snc_nowrfid_scan_item'
+                            element: 'stockroom'
+                        }
+                    },
+                    {
                         table: 'sys_ux_lib_asset'
                         id: 'd2bbb4bba1c34250ac22ed3e7f5d8930'
                         key: {
                             name: 'x_snc_nowrfid/main'
+                        }
+                    },
+                    {
+                        table: 'sys_security_acl_role'
+                        id: 'd3a249c5ea1444d89e1b7d1a2a044be8'
+                        key: {
+                            sys_security_acl: 'f3e6d020f500439a918352672b50fc8d'
+                            sys_user_role: {
+                                id: '582295e5c272456d93b74ca14dd86597'
+                                key: {
+                                    name: 'x_snc_nowrfid.admin'
+                                }
+                            }
                         }
                     },
                     {
@@ -1760,6 +2036,14 @@ declare global {
                     },
                     {
                         table: 'sys_dictionary'
+                        id: 'dc5e1252a198453ab06f61cbf14ced78'
+                        key: {
+                            name: 'x_snc_nowrfid_asset_type'
+                            element: 'siaf'
+                        }
+                    },
+                    {
+                        table: 'sys_dictionary'
                         id: 'dcbe2e7a4b124680b17cb7457f7fbfde'
                         key: {
                             name: 'x_snc_nowrfid_scan_item'
@@ -1773,6 +2057,14 @@ declare global {
                             name: 'x_snc_nowrfid_scan_batch'
                             element: 'status'
                             language: 'en'
+                        }
+                    },
+                    {
+                        table: 'sys_dictionary'
+                        id: 'df2cba1310b84fe7bc1a9c92cb1b63d9'
+                        key: {
+                            name: 'x_snc_nowrfid_counter'
+                            element: 'next_value'
                         }
                     },
                     {
@@ -1825,6 +2117,15 @@ declare global {
                         key: {
                             logical_table_name: 'x_snc_nowrfid_scan_item'
                             col_name_string: 'classification_status'
+                        }
+                    },
+                    {
+                        table: 'sys_documentation'
+                        id: 'e8152e21620240ffb748a69b53867119'
+                        key: {
+                            name: 'x_snc_nowrfid_asset_type'
+                            element: 'source'
+                            language: 'en'
                         }
                     },
                     {
@@ -1896,6 +2197,17 @@ declare global {
                             name: 'x_snc_nowrfid_scan_batch'
                             element: 'source'
                             value: 'app'
+                            language: 'en'
+                            dependent_value: 'NULL'
+                        }
+                    },
+                    {
+                        table: 'sys_choice'
+                        id: 'f45db6eae3634d2ebb74d9f09a741b82'
+                        key: {
+                            name: 'x_snc_nowrfid_asset_type'
+                            element: 'source'
+                            value: 'category'
                             language: 'en'
                             dependent_value: 'NULL'
                         }

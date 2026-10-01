@@ -62,7 +62,9 @@ test('continuous inventory keeps running while tags arrive', async () => {
     .map(t => [].concat(t.props.children).join(''))
     .join('\n');
   expect(text).toContain('A832D5983288D7ED7271F12D');
-  expect(text).toContain('3 RFID');
+  // Same EPC read twice = one row with a read counter, never two items.
+  expect(text).toContain('3 etiquetas · 0 códigos · 4 leituras');
+  expect(text).toContain('2 leituras');
 
   await ReactTestRenderer.act(async () => {
     tree!.unmount();

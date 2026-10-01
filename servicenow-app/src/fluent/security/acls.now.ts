@@ -163,3 +163,31 @@ export const restPromoteAcl = Acl({
     roles: [adminRole],
     description: 'NowRFID: promote staging items to assets (admin only)',
 })
+
+// Counters are only touched by server code; admins may inspect or reseed them.
+Acl({
+    $id: Now.ID['x_snc_nowrfid_counter-read'],
+    type: 'record',
+    table: 'x_snc_nowrfid_counter',
+    operation: 'read',
+    roles: [adminRole],
+    description: 'NowRFID: read x_snc_nowrfid_counter',
+})
+
+Acl({
+    $id: Now.ID['x_snc_nowrfid_counter-write'],
+    type: 'record',
+    table: 'x_snc_nowrfid_counter',
+    operation: 'write',
+    roles: [adminRole],
+    description: 'NowRFID: write x_snc_nowrfid_counter',
+})
+
+Acl({
+    $id: Now.ID['x_snc_nowrfid_counter-create'],
+    type: 'record',
+    table: 'x_snc_nowrfid_counter',
+    operation: 'create',
+    roles: [adminRole],
+    description: 'NowRFID: create x_snc_nowrfid_counter',
+})

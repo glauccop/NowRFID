@@ -61,6 +61,7 @@ export const x_snc_nowrfid_scan_item = Table({
                 unmatched: { label: 'Unmatched', sequence: 10 },
                 matched: { label: 'Matched', sequence: 20 },
                 created: { label: 'Created', sequence: 30 },
+                existing: { label: 'Já cadastrada', sequence: 40 },
             },
         }),
         matched_asset: ReferenceColumn({ label: 'Matched Asset', referenceTable: 'alm_asset' }),
@@ -79,5 +80,8 @@ export const x_snc_nowrfid_scan_item = Table({
         }),
         promoted_asset: ReferenceColumn({ label: 'Ativo criado', referenceTable: 'alm_asset' }),
         model: ReferenceColumn({ label: 'Modelo', referenceTable: 'cmdb_model' }),
+        stockroom: ReferenceColumn({ label: 'Almoxarifado', referenceTable: 'alm_stockroom' }),
+        asset_tag: StringColumn({ label: 'Patrimônio', maxLength: 40 }),
+        result_message: StringColumn({ label: 'Resultado', maxLength: 255 }),
     },
 })

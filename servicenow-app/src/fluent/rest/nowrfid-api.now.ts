@@ -7,6 +7,7 @@ import {
     promoteBatchHandler,
     getDashboardHandler,
     promoteDashboardHandler,
+    syncAssetTypesHandler,
 } from '../../server/rest/handlers'
 import { restApiAcl, restPromoteAcl } from '../security/acls.now'
 
@@ -66,7 +67,7 @@ RestApi({
             authorization: true,
             enforceAcl: [restApiAcl],
             produces: 'application/json',
-            shortDescription: 'Location tree (root = x_snc_nowrfid.location_root). Optional ?since=ISO8601 for delta sync',
+            shortDescription: 'Location tree (entities and their rooms, or x_snc_nowrfid.location_root when set) plus stockrooms. Optional ?since=ISO8601 for delta sync in fixed-root mode',
         },
         {
             $id: Now.ID['nowrfid-api-asset-types'],
@@ -78,7 +79,19 @@ RestApi({
             authorization: true,
             enforceAcl: [restApiAcl],
             produces: 'application/json',
-            shortDescription: 'Active asset types (Tipos de bem) for the capture menu',
+            shortDescription: 'Active asset types (Tipos de bem) with SIAF accounts and models for the capture menu',
+        },
+        {
+            $id: Now.ID['nowrfid-api-asset-types-sync'],
+            name: 'asset-types-sync',
+            method: 'POST',
+            path: '/asset-types/sync',
+            script: syncAssetTypesHandler,
+            authentication: true,
+            authorization: true,
+            enforceAcl: [restPromoteAcl],
+            produces: 'application/json',
+            shortDescription: 'Admin: regenerate the Tipos de bem from the model categories with a SIAF account of the discipline',
         },
         {
             $id: Now.ID['nowrfid-api-ping'],

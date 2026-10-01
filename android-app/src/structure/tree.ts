@@ -14,7 +14,10 @@ const TYPE_LABELS: Record<string, string> = {
   place: 'Local',
 };
 
-export function typeLabel(type: string): string {
+export function typeLabel(type: string, kind?: string): string {
+  if (kind === 'entity') {
+    return 'Unidade';
+  }
   return TYPE_LABELS[type] ?? 'Local';
 }
 
@@ -71,8 +74,11 @@ export function pathTo(tree: Tree, id: string): LocationNode[] {
   return path[0] === tree.root ? path : [];
 }
 
-/** Scanning is registered against rooms; any leaf also counts, so odd trees still work. */
+/** Scanning is registered against rooms; any leaf also counts, so odd trees still work. Never an entity itself. */
 export function isCaptureTarget(tree: Tree, node: LocationNode): boolean {
+  if (node.kind === 'entity') {
+    return false;
+  }
   return node.type === 'room' || childrenOf(tree, node.sys_id).length === 0;
 }
 
@@ -86,6 +92,7 @@ export function mergeStructure(
   if (full || !previous || previous.root !== incoming.root) {
     return { ...incoming, syncedAt };
   }
+  const stockrooms = incoming.stockrooms ?? previous.stockrooms;
   const merged = new Map(previous.locations.map(l => [l.sys_id, l]));
   for (const node of incoming.locations) {
     merged.set(node.sys_id, node);
@@ -95,5 +102,6 @@ export function mergeStructure(
     serverTime: incoming.serverTime,
     syncedAt,
     locations: [...merged.values()],
+    stockrooms,
   };
 }

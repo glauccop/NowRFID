@@ -4,6 +4,7 @@ import { submitBatch } from '../batch-service.ts'
 import { getAssetTypes, getStructure } from '../structure-service.ts'
 import { promoteBatch } from '../promote-service.ts'
 import { getDashboard, promoteClassified } from '../dashboard-service.ts'
+import { syncAssetTypes } from '../asset-type-service.ts'
 
 export function ping(_request: RESTAPIRequest, response: RESTAPIResponse) {
     response.setStatus(200)
@@ -78,4 +79,9 @@ export function promoteDashboardHandler(request: RESTAPIRequest, response: RESTA
     const strings = (list: any): string[] => (Array.isArray(list) ? list.filter((x: any) => typeof x === 'string' && x) : [])
     response.setStatus(200)
     response.setBody(promoteClassified(strings(payload.locations), strings(payload.items)))
+}
+
+export function syncAssetTypesHandler(_request: RESTAPIRequest, response: RESTAPIResponse) {
+    response.setStatus(200)
+    response.setBody(syncAssetTypes())
 }

@@ -23,6 +23,7 @@ import {
   CaptureContext,
   ConnectionState,
   DEFAULT_SETTINGS,
+  ItemOutcome,
   Operation,
   ScanBatch,
   ScanItem,
@@ -68,10 +69,12 @@ type Action =
   | { type: 'removeItem'; id: string }
   | { type: 'notes'; notes: string }
   | { type: 'batchStatus'; status: ScanBatch['status']; error?: string }
-  | { type: 'batchSent'; serverNumber: string }
+  | { type: 'batchSent'; serverNumber: string; outcomes: OutcomeMap }
   | { type: 'newBatch' };
 
 const HISTORY_LIMIT = 30;
+
+type OutcomeMap = Record<string, ItemOutcome>;
 
 const POST_CONNECT_DELAY_MS = 1000;
 const POST_CONNECT_ATTEMPTS = 3;
@@ -182,6 +185,7 @@ export function mergeItems(
         rssi: item.rssi || prev.rssi,
         tid: prev.tid || item.tid,
         userData: prev.userData || item.userData,
+        assetTag: prev.assetTag || item.assetTag,
       };
     }
   }
@@ -257,6 +261,9 @@ function reducer(state: State, action: Action): State {
     case 'batchSent': {
       const sent: ScanBatch = {
         ...state.batch,
+        items: state.batch.items.map(i =>
+          action.outcomes[i.id] ? { ...i, outcome: action.outcomes[i.id] } : i,
+        ),
         status: 'sent',
         sentAt: new Date().toISOString(),
         serverNumber: action.serverNumber,
@@ -285,6 +292,8 @@ export function stampContext(
     ...item,
     location: item.location ?? context.location,
     assetType: item.assetType ?? context.assetType,
+    stockroom: item.stockroom ?? context.stockroom,
+    model: item.model ?? context.model,
   }));
 }
 
@@ -321,13 +330,41 @@ export function barcodeToItem(code: BarcodeRead): ScanItem {
   };
 }
 
+/** What the operator sees after sending: counts per outcome and the patrimônios issued. */
+export interface SendSummary {
+  batchNumber: string;
+  created: string[];
+  existing: number;
+  matched: number;
+  pending: number;
+  failed: number;
+}
+
+export function summarize(
+  batchNumber: string,
+  outcomes: OutcomeMap,
+  rejected: number,
+): SendSummary {
+  const list = Object.values(outcomes);
+  return {
+    batchNumber,
+    created: list
+      .filter(o => o.status === 'created' && o.assetTag)
+      .map(o => o.assetTag as string),
+    existing: list.filter(o => o.status === 'existing').length,
+    matched: list.filter(o => o.status === 'matched').length,
+    pending: list.filter(o => o.status === 'pending').length,
+    failed: rejected + list.filter(o => o.status === 'error').length,
+  };
+}
+
 interface AppContextValue extends State {
   updateSettings: (patch: Partial<Settings>) => void;
   addItems: (items: ScanItem[]) => void;
   removeItem: (id: string) => void;
   setNotes: (notes: string) => void;
   newBatch: () => void;
-  sendBatch: () => Promise<void>;
+  sendBatch: () => Promise<SendSummary>;
   refreshReaderInfo: () => Promise<void>;
   syncStructure: (full?: boolean) => Promise<void>;
   setCaptureContext: (context: CaptureContext | null) => void;
@@ -449,7 +486,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
   const sendBatch = useCallback(async () => {
     const { batch, settings, connection } = stateRef.current;
     if (!batch.items.length || batch.status === 'sending') {
-      return;
+      return summarize('', {}, 0);
     }
     dispatch({ type: 'batchStatus', status: 'sending' });
     try {
@@ -464,7 +501,20 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         `Lote ${data.batch_number} enviado`,
         data,
       );
-      dispatch({ type: 'batchSent', serverNumber: data.batch_number });
+      const outcomes: OutcomeMap = {};
+      for (const o of data.outcomes ?? []) {
+        outcomes[o.client_item_id] = {
+          status: o.status,
+          assetTag: o.asset_tag,
+          message: o.message,
+        };
+      }
+      dispatch({
+        type: 'batchSent',
+        serverNumber: data.batch_number,
+        outcomes,
+      });
+      return summarize(data.batch_number, outcomes, failed);
     } catch (e) {
       dispatch({
         type: 'batchStatus',
@@ -490,8 +540,9 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         serverTime: tree.server_time,
         syncedAt: '',
         locations: tree.locations,
+        stockrooms: tree.stockrooms ?? [],
       },
-      !since,
+      !since || !!tree.full,
     );
     const assetTypes = [...types.types].sort((a, b) => a.order - b.order);
     await Promise.all([
@@ -501,6 +552,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'synced', structure, assetTypes });
     debugLog.log('app', 'info', 'Estrutura sincronizada', {
       locations: structure.locations.length,
+      stockrooms: structure.stockrooms?.length ?? 0,
       assetTypes: assetTypes.length,
       incremental: !!since,
     });

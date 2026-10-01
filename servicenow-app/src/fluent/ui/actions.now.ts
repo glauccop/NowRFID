@@ -1,5 +1,6 @@
 import { UiAction } from '@servicenow/sdk/core'
 import { promoteCurrent } from '../../server/promote-service'
+import { syncAssetTypesAction } from '../../server/asset-type-service'
 import { adminRole } from '../security/roles.now'
 
 UiAction({
@@ -22,4 +23,18 @@ UiAction({
     roles: [adminRole],
     hint: 'Cria o alm_asset (modelo/categoria do tipo de bem, no local do item) e vincula a etiqueta RFID',
     script: promoteCurrent,
+})
+
+UiAction({
+    $id: Now.ID['nowrfid-ua-sync-asset-types'],
+    table: 'x_snc_nowrfid_asset_type',
+    name: 'Sincronizar com categorias',
+    actionName: 'nowrfid_sync_asset_types',
+    list: {
+        showBannerButton: true,
+        style: 'primary',
+    },
+    roles: [adminRole],
+    hint: 'Gera/atualiza um Tipo de bem para cada categoria de modelo com conta SIAF da disciplina (1231…)',
+    script: syncAssetTypesAction,
 })

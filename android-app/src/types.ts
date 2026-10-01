@@ -17,7 +17,21 @@ export interface ScanItem {
   location?: string;
   /** x_snc_nowrfid_asset_type sys_id; empty = classify later in ServiceNow. */
   assetType?: string;
+  /** alm_stockroom sys_id when the destination is an almoxarifado (asset goes "em estoque"). */
+  stockroom?: string;
+  /** cmdb_model sys_id chosen by the operator; empty = the type's default model. */
+  model?: string;
+  /** Número de patrimônio of an existing plaqueta paired with this tag (vincular). */
+  assetTag?: string;
+  /** What ServiceNow did with the item after the batch was sent. */
+  outcome?: ItemOutcome;
   raw: Record<string, unknown>;
+}
+
+export interface ItemOutcome {
+  status: 'created' | 'existing' | 'matched' | 'pending' | 'error';
+  assetTag?: string;
+  message: string;
 }
 
 export type BatchStatus = 'open' | 'sending' | 'sent' | 'error';
@@ -78,6 +92,15 @@ export interface LocationNode {
   parent: string;
   full_name: string;
   active: boolean;
+  /** 'entity' for unidades (they own the rooms); empty otherwise. */
+  kind?: string;
+}
+
+export interface Stockroom {
+  sys_id: string;
+  name: string;
+  location: string;
+  location_name: string;
 }
 
 export interface Structure {
@@ -85,6 +108,24 @@ export interface Structure {
   serverTime: string;
   syncedAt: string;
   locations: LocationNode[];
+  stockrooms?: Stockroom[];
+}
+
+/** Conta contábil SIAF (u_siaf_codigos). */
+export interface SiafCode {
+  sys_id: string;
+  code: string;
+  description: string;
+  life_years: number | null;
+  residual_pct: number | null;
+}
+
+export interface AssetModel {
+  sys_id: string;
+  name: string;
+  /** u_siaf_codigos sys_id. */
+  siaf: string;
+  assets: number;
 }
 
 export interface AssetType {
@@ -92,11 +133,24 @@ export interface AssetType {
   name: string;
   icon: string;
   order: number;
+  asset_class?: string;
+  /** Predominant SIAF account (sys_id) of the category. */
+  siaf?: string;
+  default_model?: string;
+  models?: AssetModel[];
+  siaf_codes?: SiafCode[];
 }
+
+/** New asset (ServiceNow issues the número de patrimônio) or existing one with a plaqueta to pair. */
+export type CaptureMode = 'new' | 'existing';
 
 /** What the operator selected before starting the scanner. */
 export interface CaptureContext {
+  /** cmn_location sys_id (for a stockroom: the stockroom's location). */
   location: string;
   locationPath: string[];
   assetType?: string;
+  stockroom?: string;
+  model?: string;
+  mode?: CaptureMode;
 }

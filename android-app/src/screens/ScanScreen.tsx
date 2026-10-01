@@ -22,8 +22,9 @@ import {
   Vibration,
   View,
 } from 'react-native';
-import { reader } from '../reader/chainway';
+import { reader, TagRead } from '../reader/chainway';
 import { barcodeToItem, tagToItem, useApp } from '../state/AppState';
+import { useToast } from '../ui/toast';
 import { Button, EmptyState, Fab, Segmented } from '../ui/components';
 import { color, font, fontSize, palette, space } from '../ui/theme';
 import { ItemRow } from './ItemRow';
@@ -47,7 +48,13 @@ export function ScannerView({
   onChangeSelection: () => void;
 }) {
   const { connection, batch, addItems, captureContext, assetTypes } = useApp();
-  const [mode, setMode] = useState<Mode>('rfid');
+  const pairing = captureContext?.mode === 'existing';
+  // Pairing starts with the plaqueta: read its barcode, then the tag of the same item.
+  const [mode, setMode] = useState<Mode>(pairing ? 'barcode' : 'rfid');
+  const [plaqueta, setPlaqueta] = useState('');
+  const plaquetaRef = useRef('');
+  plaquetaRef.current = plaqueta;
+  const toast = useToast();
   const [inventorying, setInventorying] = useState(false);
   const [scanningCode, setScanningCode] = useState(false);
   const inventoryRef = useRef(false);
@@ -72,18 +79,64 @@ export function ScannerView({
     await reader.stopInventory().catch(() => undefined);
   }, []);
 
-  const readSingle = async () => {
+  // Haptic confirmation only for tags not yet in the batch (re-reads stay silent).
+  const knownEpcs = useRef(new Set<string>());
+  knownEpcs.current = new Set(
+    batch.items.filter(i => i.epc).map(i => i.epc as string),
+  );
+
+  /**
+   * Normal mode: every tag goes to the batch. Pairing mode: only a single new tag read right after
+   * a plaqueta is accepted, and it carries that número de patrimônio; tags already in the batch
+   * are just re-reads.
+   */
+  const acceptTags = useCallback(
+    (list: TagRead[]) => {
+      const tags = list.filter(t => t.epc);
+      const fresh = tags.filter(t => !knownEpcs.current.has(t.epc));
+      if (!pairing) {
+        if (fresh.length) {
+          Vibration.vibrate(30);
+        }
+        addItems(tags.map(t => tagToItem(t)));
+        return;
+      }
+      addItems(
+        tags.filter(t => knownEpcs.current.has(t.epc)).map(t => tagToItem(t)),
+      );
+      if (!fresh.length) {
+        return;
+      }
+      const assetTag = plaquetaRef.current;
+      if (!assetTag) {
+        toast('Leia primeiro o código da plaqueta');
+        return;
+      }
+      if (fresh.length > 1) {
+        toast('Mais de uma tag no alcance — aproxime só a do bem');
+        return;
+      }
+      Vibration.vibrate(60);
+      addItems([{ ...tagToItem(fresh[0]), assetTag }]);
+      setPlaqueta('');
+      toast(`Tag vinculada ao patrimônio ${assetTag}`);
+      setMode('barcode');
+    },
+    [addItems, pairing, toast],
+  );
+
+  const readSingle = useCallback(async () => {
     try {
       const tag = await reader.inventorySingle();
       if (tag?.epc) {
-        addItems([tagToItem(tag)]);
+        acceptTags([tag]);
       } else {
         Alert.alert('Leitura única', 'Nenhuma tag encontrada.');
       }
     } catch (e) {
       Alert.alert('Leitura única', String(e));
     }
-  };
+  }, [acceptTags]);
 
   const scanCode = useCallback(async () => {
     setScanningCode(true);
@@ -91,31 +144,24 @@ export function ScannerView({
       const code = await reader.scanBarcode();
       if (code?.value) {
         Vibration.vibrate(30);
-        addItems([barcodeToItem(code)]);
+        if (pairing) {
+          setPlaqueta(code.value.trim());
+          setMode('rfid');
+        } else {
+          addItems([barcodeToItem(code)]);
+        }
       }
     } catch (e) {
       Alert.alert('Código de barras/QR', String(e));
     } finally {
       setScanningCode(false);
     }
-  }, [addItems]);
-
-  // Haptic confirmation only for tags not yet in the batch (re-reads stay silent).
-  const knownEpcs = useRef(new Set<string>());
-  knownEpcs.current = new Set(
-    batch.items.filter(i => i.epc).map(i => i.epc as string),
-  );
+  }, [addItems, pairing]);
 
   useEffect(() => {
-    const tags = reader.onTags(list => {
-      const fresh = list.filter(t => t.epc);
-      if (fresh.some(t => !knownEpcs.current.has(t.epc))) {
-        Vibration.vibrate(30);
-      }
-      addItems(fresh.map(t => tagToItem(t)));
-    });
+    const tags = reader.onTags(acceptTags);
     return () => tags.remove();
-  }, [addItems]);
+  }, [acceptTags]);
 
   // Stop the radio only when leaving the screen, never on re-subscription.
   useEffect(
@@ -135,13 +181,26 @@ export function ScannerView({
         return;
       }
       if (mode === 'rfid') {
-        inventoryRef.current ? stopInventory() : startInventory();
+        // Pairing needs exactly one tag: the trigger does a single read instead of an inventory.
+        if (pairing) {
+          readSingle();
+        } else {
+          inventoryRef.current ? stopInventory() : startInventory();
+        }
       } else if (!scanningCode) {
         scanCode();
       }
     });
     return () => sub.remove();
-  }, [mode, scanningCode, startInventory, stopInventory, scanCode]);
+  }, [
+    mode,
+    pairing,
+    scanningCode,
+    startInventory,
+    stopInventory,
+    scanCode,
+    readSingle,
+  ]);
 
   const changeMode = (m: Mode) => {
     if (inventoryRef.current) {
@@ -158,12 +217,14 @@ export function ScannerView({
         .filter(
           i =>
             i.location === captureContext?.location &&
+            (i.stockroom ?? '') === (captureContext?.stockroom ?? '') &&
             (i.assetType ?? '') === (captureContext?.assetType ?? ''),
         )
         .reverse(),
     [batch.items, captureContext],
   );
   const rfidCount = items.filter(i => i.captureType === 'rfid').length;
+  const reads = items.reduce((n, i) => n + i.readCount, 0);
   const path =
     captureContext?.locationPath.slice(1).join(' › ') ||
     captureContext?.locationPath.join(' › ');
@@ -185,7 +246,8 @@ export function ScannerView({
             </Text>
           </View>
           <Text style={s.summaryCount}>
-            {rfidCount} RFID · {items.length - rfidCount} códigos aqui ·{' '}
+            {rfidCount} {rfidCount === 1 ? 'etiqueta' : 'etiquetas'} ·{' '}
+            {items.length - rfidCount} códigos · {reads} leituras ·{' '}
             {batch.items.length} no lote
           </Text>
         </View>
@@ -197,6 +259,14 @@ export function ScannerView({
           onPress={onChangeSelection}
         />
       </View>
+
+      {pairing && (
+        <Text style={s.pairing}>
+          {plaqueta
+            ? `Plaqueta ${plaqueta} lida — agora leia a tag RFID do bem.`
+            : 'Vincular: leia o código de barras da plaqueta do bem.'}
+        </Text>
+      )}
 
       {!connected && (
         <Text style={s.warning}>
@@ -246,7 +316,14 @@ export function ScannerView({
         }
       />
 
-      {mode === 'rfid' ? (
+      {mode === 'rfid' && pairing ? (
+        <Fab
+          icon={Tag}
+          label="Ler tag do bem"
+          disabled={!connected}
+          onPress={readSingle}
+        />
+      ) : mode === 'rfid' ? (
         <Fab
           icon={inventorying ? Square : Play}
           label={inventorying ? 'Parar leitura' : 'Iniciar leitura contínua'}
@@ -294,6 +371,13 @@ const s = StyleSheet.create({
     fontFamily: font.regular,
     fontSize: fontSize.sm,
     color: color.textTertiary,
+  },
+  pairing: {
+    fontFamily: font.bold,
+    color: palette.primary2,
+    backgroundColor: palette.primary0,
+    paddingHorizontal: space.sm2,
+    paddingVertical: space.sm,
   },
   warning: {
     fontFamily: font.bold,

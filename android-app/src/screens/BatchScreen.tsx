@@ -1,7 +1,7 @@
 import { History, Inbox, Layers, List, Send } from 'lucide-react-native';
 import { useToast } from '../ui/toast';
 import React, { useState } from 'react';
-import { Alert, Text, View } from 'react-native';
+import { Alert, Pressable, Text, View } from 'react-native';
 import { useApp } from '../state/AppState';
 import {
   EmptyState,
@@ -27,6 +27,7 @@ export function BatchScreen() {
     sendBatch,
   } = useApp();
   const [showHistory, setShowHistory] = useState(false);
+  const [openBatch, setOpenBatch] = useState('');
   const toast = useToast();
   const sending = batch.status === 'sending';
   const reads = batch.items.filter(i => i.operation === 'read').length;
@@ -40,8 +41,22 @@ export function BatchScreen() {
       );
     }
     try {
-      await sendBatch();
-      toast('Lote enviado ao ServiceNow');
+      const r = await sendBatch();
+      const lines = [
+        r.created.length &&
+          `${r.created.length} ativos criados — patrimônio ${r.created.join(
+            ', ',
+          )}`,
+        r.matched && `${r.matched} tags vinculadas a patrimônios existentes`,
+        r.existing && `${r.existing} tags já cadastradas (local atualizado)`,
+        r.pending && `${r.pending} itens a classificar no ServiceNow`,
+        r.failed && `${r.failed} itens com erro (veja no histórico)`,
+      ].filter(Boolean);
+      if (lines.length) {
+        Alert.alert(`Lote ${r.batchNumber} enviado`, lines.join('\n\n'));
+      } else {
+        toast('Lote enviado ao ServiceNow');
+      }
     } catch (e) {
       Alert.alert(
         'Falha no envio',
@@ -139,26 +154,33 @@ export function BatchScreen() {
       >
         {showHistory &&
           history.map(h => (
-            <View
-              key={h.id}
-              style={[
-                styles.row,
-                {
-                  borderTopWidth: 1,
-                  borderTopColor: colors.border,
-                  paddingTop: 6,
-                },
-              ]}
-            >
-              <View style={styles.flex1}>
-                <Text style={styles.text}>
-                  {h.serverNumber || h.id.slice(0, 8)}
-                </Text>
-                <Text style={styles.muted}>
-                  {h.sentAt ? new Date(h.sentAt).toLocaleString() : ''}
-                </Text>
-              </View>
-              <Badge text={`${h.items.length} itens`} color={colors.success} />
+            <View key={h.id}>
+              <Pressable
+                onPress={() => setOpenBatch(id => (id === h.id ? '' : h.id))}
+                style={[
+                  styles.row,
+                  {
+                    borderTopWidth: 1,
+                    borderTopColor: colors.border,
+                    paddingTop: 6,
+                  },
+                ]}
+              >
+                <View style={styles.flex1}>
+                  <Text style={styles.text}>
+                    {h.serverNumber || h.id.slice(0, 8)}
+                  </Text>
+                  <Text style={styles.muted}>
+                    {h.sentAt ? new Date(h.sentAt).toLocaleString() : ''}
+                  </Text>
+                </View>
+                <Badge
+                  text={`${h.items.length} itens`}
+                  color={colors.success}
+                />
+              </Pressable>
+              {openBatch === h.id &&
+                h.items.map(item => <ItemRow key={item.id} item={item} />)}
             </View>
           ))}
       </Card>

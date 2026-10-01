@@ -1,9 +1,12 @@
 import { gs, GlideRecord, GlideDateTime } from '@servicenow/glide'
+import { assetForEpc, promoteItem } from './promote-service.ts'
 
 const BATCH_TABLE = 'x_snc_nowrfid_scan_batch'
 const ITEM_TABLE = 'x_snc_nowrfid_scan_item'
 const CAPTURE_TYPES = ['rfid', 'barcode', 'qr']
 const OPERATIONS = ['read', 'write']
+/** 'true' = create/move the assets as soon as the batch arrives (PoC flow); 'false' = admin promotes later. */
+export const AUTO_PROMOTE_PROPERTY = 'x_snc_nowrfid.auto_promote'
 
 export interface BatchPayload {
     client_batch_id?: string
@@ -14,6 +17,7 @@ export interface BatchPayload {
     notes?: string
     location?: string
     asset_type?: string
+    stockroom?: string
 }
 
 export interface ItemPayload {
@@ -31,6 +35,17 @@ export interface ItemPayload {
     raw_payload?: string | object
     location?: string
     asset_type?: string
+    stockroom?: string
+    model?: string
+    asset_tag?: string
+}
+
+export interface ItemOutcome {
+    client_item_id: string
+    status: 'created' | 'existing' | 'matched' | 'pending' | 'error'
+    asset_tag?: string
+    asset_sys_id?: string
+    message: string
 }
 
 export interface SubmitResult {
@@ -42,6 +57,8 @@ export interface SubmitResult {
         duplicate?: boolean
         pending?: number
         classified?: number
+        existing?: number
+        outcomes?: ItemOutcome[]
         errors: { client_item_id: string; message: string }[]
         error?: string
     }
@@ -130,6 +147,7 @@ export function submitBatch(payload: any): SubmitResult {
                 batch_number: existing.getValue('number'),
                 items_created: countItems(sysId),
                 duplicate: true,
+                outcomes: storedOutcomes(sysId),
                 errors,
             },
         }
@@ -151,6 +169,10 @@ export function submitBatch(payload: any): SubmitResult {
     if (!refExists('x_snc_nowrfid_asset_type', batchAssetType)) {
         return { status: 400, body: { errors, error: 'batch.asset_type not found: ' + batchAssetType } }
     }
+    const batchStockroom = str(batch.stockroom, 32)
+    if (!refExists('alm_stockroom', batchStockroom)) {
+        return { status: 400, body: { errors, error: 'batch.stockroom not found: ' + batchStockroom } }
+    }
     if (batchLocation) b.setValue('location', batchLocation)
     if (batchAssetType) b.setValue('asset_type', batchAssetType)
     b.setValue('source', 'app')
@@ -167,6 +189,8 @@ export function submitBatch(payload: any): SubmitResult {
     let created = 0
     let pending = 0
     let classified = 0
+    let alreadyTagged = 0
+    const inserted: { id: string; clientItemId: string }[] = []
     for (let i = 0; i < items.length; i++) {
         const it = items[i] || {}
         const clientItemId = str(it.client_item_id, 64) || 'index:' + i
@@ -198,10 +222,23 @@ export function submitBatch(payload: any): SubmitResult {
             errors.push({ client_item_id: clientItemId, message: 'asset_type not found: ' + itemAssetType })
             continue
         }
+        const itemStockroom = str(it.stockroom, 32) || batchStockroom
+        const itemModel = str(it.model, 32)
+        if (!refExists('alm_stockroom', itemStockroom)) {
+            errors.push({ client_item_id: clientItemId, message: 'stockroom not found: ' + itemStockroom })
+            continue
+        }
+        if (!refExists('cmdb_model', itemModel)) {
+            errors.push({ client_item_id: clientItemId, message: 'model not found: ' + itemModel })
+            continue
+        }
         const gr = new GlideRecord(ITEM_TABLE)
         gr.initialize()
         if (itemLocation) gr.setValue('location', itemLocation)
         if (itemAssetType) gr.setValue('asset_type', itemAssetType)
+        if (itemStockroom) gr.setValue('stockroom', itemStockroom)
+        if (itemModel) gr.setValue('model', itemModel)
+        gr.setValue('asset_tag', str(it.asset_tag, 40).trim())
         gr.setValue('classification_status', itemAssetType ? 'classified' : 'pending')
         gr.setValue('batch', batchSysId)
         gr.setValue('client_item_id', clientItemId)
@@ -218,8 +255,16 @@ export function submitBatch(payload: any): SubmitResult {
         if (itemAt) gr.setValue('captured_at', itemAt)
         const raw = typeof it.raw_payload === 'string' ? it.raw_payload : it.raw_payload ? JSON.stringify(it.raw_payload) : ''
         gr.setValue('raw_payload', str(raw, 4000))
-        gr.setValue('match_status', 'unmatched')
-        if (gr.insert()) {
+        // Same tag read again (another batch, another day): flag it now so nobody creates a second asset.
+        const known = captureType === 'rfid' ? assetForEpc(str(it.epc, 128).toUpperCase()) : ''
+        gr.setValue('match_status', known ? 'existing' : 'unmatched')
+        if (known) {
+            gr.setValue('matched_asset', known)
+            alreadyTagged++
+        }
+        const itemSysId = gr.insert()
+        if (itemSysId) {
+            inserted.push({ id: itemSysId, clientItemId })
             created++
             if (itemAssetType) classified++
             else pending++
@@ -232,6 +277,8 @@ export function submitBatch(payload: any): SubmitResult {
     if (created === 0) b.setValue('status', 'error')
     b.update()
 
+    const outcomes = gs.getProperty(AUTO_PROMOTE_PROPERTY, 'true') === 'true' ? promoteInserted(inserted) : undefined
+
     return {
         status: 201,
         body: {
@@ -241,7 +288,48 @@ export function submitBatch(payload: any): SubmitResult {
             duplicate: false,
             pending,
             classified,
+            existing: alreadyTagged,
+            outcomes,
             errors,
         },
     }
+}
+
+const MATCH_TO_OUTCOME: { [k: string]: ItemOutcome['status'] } = { created: 'created', existing: 'existing', matched: 'matched' }
+
+/** Outcomes of a batch that was already processed (the app retried after a timeout). */
+function storedOutcomes(batchSysId: string): ItemOutcome[] {
+    const outcomes: ItemOutcome[] = []
+    const gr = new GlideRecord(ITEM_TABLE)
+    gr.addQuery('batch', batchSysId)
+    gr.query()
+    while (gr.next()) {
+        const promoted = gr.getValue('classification_status') === 'promoted'
+        outcomes.push({
+            client_item_id: gr.getValue('client_item_id') || '',
+            status: promoted ? MATCH_TO_OUTCOME[gr.getValue('match_status')] || 'created' : gr.getValue('result_message') ? 'error' : 'pending',
+            asset_tag: gr.getValue('asset_tag') || undefined,
+            asset_sys_id: gr.getValue('promoted_asset') || undefined,
+            message: gr.getValue('result_message') || '',
+        })
+    }
+    return outcomes
+}
+
+/** Auto-promotion right after the batch is stored; returns what happened to each item for the app. */
+function promoteInserted(inserted: { id: string; clientItemId: string }[]): ItemOutcome[] {
+    const outcomes: ItemOutcome[] = []
+    for (const entry of inserted) {
+        const gr = new GlideRecord(ITEM_TABLE)
+        if (!gr.get(entry.id)) continue
+        const r = promoteItem(gr)
+        outcomes.push({
+            client_item_id: entry.clientItemId,
+            status: r.ok ? r.status || 'created' : r.skipped ? 'pending' : 'error',
+            asset_tag: r.asset_tag,
+            asset_sys_id: r.asset,
+            message: r.message,
+        })
+    }
+    return outcomes
 }

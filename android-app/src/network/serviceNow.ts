@@ -1,7 +1,9 @@
 import { debugLog } from '../debug/debugLog';
 import type {
   AssetType,
+  ItemOutcome,
   LocationNode,
+  Stockroom,
   ScanBatch,
   ScanItem,
   Settings,
@@ -229,6 +231,15 @@ export interface BatchResult {
   batch_sys_id: string;
   batch_number: string;
   items_created: number;
+  duplicate?: boolean;
+  existing?: number;
+  /** Present when ServiceNow creates the assets on arrival (x_snc_nowrfid.auto_promote). */
+  outcomes?: {
+    client_item_id: string;
+    status: ItemOutcome['status'];
+    asset_tag?: string;
+    message: string;
+  }[];
   errors: { client_item_id: string; message: string }[];
 }
 
@@ -247,6 +258,9 @@ function toApiItem(item: ScanItem) {
     captured_at: item.capturedAt,
     location: item.location ?? '',
     asset_type: item.assetType ?? '',
+    stockroom: item.stockroom ?? '',
+    model: item.model ?? '',
+    asset_tag: item.assetTag ?? '',
     raw_payload: JSON.stringify(item.raw),
   };
 }
@@ -254,7 +268,10 @@ function toApiItem(item: ScanItem) {
 export interface StructureResult {
   root: string;
   server_time: string;
+  /** True when the server sent the whole tree (no delta to merge). */
+  full?: boolean;
   locations: LocationNode[];
+  stockrooms?: Stockroom[];
 }
 
 export interface AssetTypesResult {

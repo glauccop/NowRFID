@@ -136,3 +136,39 @@ CrossScopePrivilege({
     targetScope: 'sn_ent',
     targetType: 'sys_db_object',
 })
+
+CrossScopePrivilege({
+    $id: Now.ID['nowrfid-xscope-alm_stockroom-read'],
+    operation: 'read',
+    status: 'allowed',
+    targetName: 'alm_stockroom',
+    targetScope: 'global',
+    targetType: 'sys_db_object',
+})
+
+CrossScopePrivilege({
+    $id: Now.ID['nowrfid-xscope-u_siaf_codigos-read'],
+    operation: 'read',
+    status: 'allowed',
+    targetName: 'u_siaf_codigos',
+    targetScope: 'global',
+    targetType: 'sys_db_object',
+})
+
+CrossScopePrivilege({
+    $id: Now.ID['nowrfid-xscope-cmdb_hardware_product_model-read'],
+    operation: 'read',
+    status: 'allowed',
+    targetName: 'cmdb_hardware_product_model',
+    targetScope: 'global',
+    targetType: 'sys_db_object',
+})
+
+CrossScopePrivilege({
+    $id: Now.ID['nowrfid-xscope-sn_ent_model-read'],
+    operation: 'read',
+    status: 'allowed',
+    targetName: 'sn_ent_model',
+    targetScope: 'sn_ent',
+    targetType: 'sys_db_object',
+})

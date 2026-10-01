@@ -12,6 +12,19 @@ const KIND = {
   qr: { icon: QrCode, tone: tone.positive, label: 'QR Code' },
 };
 
+/** One line per tag: UHF tags answer many times per second, so we count reads, not items. */
+function readsLabel(count: number): string {
+  return count === 1 ? '1 leitura' : `${count} leituras`;
+}
+
+const OUTCOME = {
+  created: { label: 'CRIADO', tone: 'positive' },
+  existing: { label: 'JÁ CADASTRADA', tone: 'warning' },
+  matched: { label: 'VINCULADA', tone: 'info' },
+  pending: { label: 'A CLASSIFICAR', tone: 'neutral' },
+  error: { label: 'ERRO', tone: 'critical' },
+} as const;
+
 export function ItemRow({
   item,
   onRemove,
@@ -22,9 +35,12 @@ export function ItemRow({
   const { assetTypes, structure } = useApp();
   const type = assetTypes.find(t => t.sys_id === item.assetType);
   const room = structure?.locations.find(l => l.sys_id === item.location);
+  const stockroom = structure?.stockrooms?.find(
+    r => r.sys_id === item.stockroom,
+  );
   const where = [
     type ? `${type.icon} ${type.name}` : item.location ? '❔ sem tipo' : '',
-    room?.name,
+    stockroom ? `Almoxarifado ${stockroom.name}` : room?.name,
   ]
     .filter(Boolean)
     .join(' · ');
@@ -34,11 +50,15 @@ export function ItemRow({
       ? [
           item.tid && `TID ${item.tid}`,
           item.rssi && `RSSI ${item.rssi}`,
-          `x${item.readCount}`,
+          readsLabel(item.readCount),
         ]
           .filter(Boolean)
           .join(' · ')
-      : [item.symbology, `x${item.readCount}`].filter(Boolean).join(' · ');
+      : [item.symbology, readsLabel(item.readCount)]
+          .filter(Boolean)
+          .join(' · ');
+  const patrimonio = item.outcome?.assetTag || item.assetTag;
+  const outcome = item.outcome ? OUTCOME[item.outcome.status] : undefined;
   const kind = KIND[item.captureType];
   const Icon = item.operation === 'write' ? PenLine : kind.icon;
 
@@ -59,7 +79,14 @@ export function ItemRow({
         </Text>
         <Text style={s.sub}>{sub}</Text>
         {!!where && <Text style={s.sub}>{where}</Text>}
+        {!!patrimonio && (
+          <Text style={s.patrimonio}>Patrimônio {patrimonio}</Text>
+        )}
+        {item.outcome?.status === 'error' && (
+          <Text style={s.sub}>{item.outcome.message}</Text>
+        )}
       </View>
+      {outcome && <Badge text={outcome.label} tone={outcome.tone} />}
       {item.operation === 'write' && <Badge text="GRAVADA" tone="critical" />}
       {onRemove && (
         <IconButton
@@ -94,6 +121,11 @@ const s = StyleSheet.create({
     fontFamily: font.mono,
     fontSize: fontSize.md,
     color: color.textPrimary,
+  },
+  patrimonio: {
+    fontFamily: font.bold,
+    fontSize: fontSize.sm,
+    color: palette.primary2,
   },
   sub: {
     fontFamily: font.regular,
