@@ -49,6 +49,11 @@ declare global {
                         table: 'sys_script'
                         id: 'e3521b79b5b245c588e969bc64be0e3f'
                     }
+                    'nowrfid-demo-seed-once': {
+                        table: 'sysauto_script'
+                        id: '29a180e0a7ea4c0f96e05b6df669f3b9'
+                        deleted: true
+                    }
                     'nowrfid-menu': {
                         table: 'sys_app_application'
                         id: '2412bb0cd16443b9a16ee6f8bce51972'
@@ -93,6 +98,14 @@ declare global {
                     'nowrfid-ua-create-assets': {
                         table: 'sys_ui_action'
                         id: '77db59e237a64350ae2a999f43693388'
+                    }
+                    'nowrfid-ua-demo-remove': {
+                        table: 'sys_ui_action'
+                        id: '537e47091b1e47e6b93a9f6bc1a49e47'
+                    }
+                    'nowrfid-ua-demo-seed': {
+                        table: 'sys_ui_action'
+                        id: '751615796deb42c4822c716e955ab7c3'
                     }
                     'nowrfid-ua-sync-asset-types': {
                         table: 'sys_ui_action'
@@ -193,6 +206,10 @@ declare global {
                     'src_server_dashboard-service_ts': {
                         table: 'sys_module'
                         id: 'c96264b0ee5a465c8eb2ee8371c8207f'
+                    }
+                    'src_server_demo-service_ts': {
+                        table: 'sys_module'
+                        id: 'aee9339ed3cd4fec9da7ee61b061b37d'
                     }
                     'src_server_promote-service_ts': {
                         table: 'sys_module'
@@ -506,6 +523,19 @@ declare global {
                         key: {
                             name: 'x_snc_nowrfid_scan_item'
                             element: 'operation'
+                        }
+                    },
+                    {
+                        table: 'sys_ui_action_role'
+                        id: '18dd8c79c8ee4a4898a8470e343e0691'
+                        key: {
+                            sys_ui_action: '751615796deb42c4822c716e955ab7c3'
+                            sys_user_role: {
+                                id: '582295e5c272456d93b74ca14dd86597'
+                                key: {
+                                    name: 'x_snc_nowrfid.admin'
+                                }
+                            }
                         }
                     },
                     {
@@ -1371,6 +1401,19 @@ declare global {
                         key: {
                             name: 'x_snc_nowrfid_tag'
                             element: 'asset'
+                        }
+                    },
+                    {
+                        table: 'sys_ui_action_role'
+                        id: '967fdd5daff44830918a1360b47ff274'
+                        key: {
+                            sys_ui_action: '537e47091b1e47e6b93a9f6bc1a49e47'
+                            sys_user_role: {
+                                id: '582295e5c272456d93b74ca14dd86597'
+                                key: {
+                                    name: 'x_snc_nowrfid.admin'
+                                }
+                            }
                         }
                     },
                     {

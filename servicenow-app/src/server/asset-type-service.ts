@@ -60,6 +60,31 @@ export function displayName(name: string): string {
 }
 
 let siafCache: { [id: string]: SiafInfo } | null = null
+const siafIdByValue: { [value: string]: string } = {}
+
+/**
+ * u_codigo_siaf is a reference, but the customer's load stored the raw code text in many rows
+ * (e.g. "123110303" on sn_ent_facility_asset) — the SIAF job accepts both. Returns the
+ * u_siaf_codigos sys_id either way; for duplicated codes, the row that has a useful life wins.
+ */
+export function resolveSiaf(value: string): string {
+    const v = (value || '').trim()
+    if (!v) return ''
+    if (siafIdByValue[v] !== undefined) return siafIdByValue[v]
+    const gr = new GlideRecord(SIAF_TABLE)
+    let id = ''
+    if (/^[0-9a-f]{32}$/.test(v) && gr.get(v)) {
+        id = v
+    } else {
+        gr.addQuery('u_codigo_raw', v)
+        gr.orderByDesc('u_vida_util_anos')
+        gr.setLimit(1)
+        gr.query()
+        if (gr.next()) id = gr.getUniqueValue()
+    }
+    siafIdByValue[v] = id
+    return id
+}
 
 export function getSiaf(sysId: string): SiafInfo | null {
     if (!sysId) return null
@@ -77,6 +102,11 @@ export function getSiaf(sysId: string): SiafInfo | null {
         }
     }
     return siafCache[sysId]
+}
+
+/** Matches both proper references and the raw code text left by the customer's load. */
+function siafQuery(prefix: string): string {
+    return SIAF_FIELD + '.u_codigo_rawSTARTSWITH' + prefix + '^OR' + SIAF_FIELD + 'STARTSWITH' + prefix
 }
 
 function topKey(counts: { [k: string]: number }): string {
@@ -111,10 +141,10 @@ export function collectCategories(): { [categoryId: string]: CategoryStats } {
     for (const table of MODEL_TABLES) {
         const gr = new GlideRecord(table)
         if (!gr.isValid()) continue
-        gr.addQuery(SIAF_FIELD + '.u_codigo_raw', 'STARTSWITH', prefix)
+        gr.addEncodedQuery(siafQuery(prefix))
         gr.query()
         while (gr.next()) {
-            const siaf = gr.getValue(SIAF_FIELD)
+            const siaf = resolveSiaf(gr.getValue(SIAF_FIELD))
             // cmdb_model_category is a list: a model may sit in several categories.
             for (const cat of (gr.getValue('cmdb_model_category') || '').split(',')) {
                 if (!cat) continue
@@ -128,12 +158,12 @@ export function collectCategories(): { [categoryId: string]: CategoryStats } {
     for (const table of ASSET_TABLES) {
         const gr = new GlideRecord(table)
         if (!gr.isValid()) continue
-        gr.addQuery(SIAF_FIELD + '.u_codigo_raw', 'STARTSWITH', prefix)
+        gr.addEncodedQuery(siafQuery(prefix))
         gr.addNotNullQuery('model_category')
         gr.query()
         while (gr.next()) {
             const cat = gr.getValue('model_category')
-            const siaf = gr.getValue(SIAF_FIELD)
+            const siaf = resolveSiaf(gr.getValue(SIAF_FIELD))
             const s = stats(cat)
             s.siaf[siaf] = (s.siaf[siaf] || 0) + 1
             s.assetClass[table] = (s.assetClass[table] || 0) + 1

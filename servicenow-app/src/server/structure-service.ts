@@ -71,7 +71,7 @@ function walkDescendants(startIds: string[], visit: (gr: GlideRecord) => void) {
     }
 }
 
-function getStockrooms(): StockroomNode[] {
+export function getStockrooms(): StockroomNode[] {
     const list: StockroomNode[] = []
     const gr = new GlideRecord('alm_stockroom')
     gr.addEncodedQuery(gs.getProperty(STOCKROOM_QUERY_PROPERTY, DEFAULT_STOCKROOM_QUERY))
@@ -106,7 +106,7 @@ function fixedRootTree(rootId: string, since: string): { root: string; locations
  * to navigate to them. A room hanging directly under a city (no entity) is left out on purpose.
  * The root is the deepest ancestor shared by every entity.
  */
-function entityTree(): { root: string; locations: LocationNode[] } {
+export function entityTree(): { root: string; locations: LocationNode[] } {
     const pattern = new RegExp(gs.getProperty(ENTITY_PATTERN_PROPERTY, DEFAULT_ENTITY_PATTERN))
     const entities: GlideRecord[] = []
     const gr = new GlideRecord('cmn_location')

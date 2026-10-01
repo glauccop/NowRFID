@@ -122,7 +122,7 @@ function countItems(batchSysId: string): number {
     return gr.getRowCount()
 }
 
-export function submitBatch(payload: any): SubmitResult {
+export function submitBatch(payload: any, options: { autoPromote?: boolean } = {}): SubmitResult {
     const errors: { client_item_id: string; message: string }[] = []
     if (!payload || typeof payload !== 'object') {
         return { status: 400, body: { errors, error: 'Body must be a JSON object' } }
@@ -277,7 +277,8 @@ export function submitBatch(payload: any): SubmitResult {
     if (created === 0) b.setValue('status', 'error')
     b.update()
 
-    const outcomes = gs.getProperty(AUTO_PROMOTE_PROPERTY, 'true') === 'true' ? promoteInserted(inserted) : undefined
+    const autoPromote = options.autoPromote !== undefined ? options.autoPromote : gs.getProperty(AUTO_PROMOTE_PROPERTY, 'true') === 'true'
+    const outcomes = autoPromote ? promoteInserted(inserted) : undefined
 
     return {
         status: 201,

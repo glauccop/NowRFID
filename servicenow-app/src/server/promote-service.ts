@@ -1,5 +1,6 @@
 import { gs, GlideRecord, GlideDateTime } from '@servicenow/glide'
 import { nextAssetTag, assetTagTaken } from './asset-tag-service.ts'
+import { resolveSiaf } from './asset-type-service.ts'
 
 const ITEM_TABLE = 'x_snc_nowrfid_scan_item'
 const TYPE_TABLE = 'x_snc_nowrfid_asset_type'
@@ -97,7 +98,7 @@ function siafOfModel(modelId: string): string {
     if (!modelId || !base.get(modelId)) return ''
     const model = new GlideRecord(base.getValue('sys_class_name') || 'cmdb_model')
     if (!model.isValid() || !model.isValidField(SIAF_FIELD) || !model.get(modelId)) return ''
-    return model.getValue(SIAF_FIELD) || ''
+    return resolveSiaf(model.getValue(SIAF_FIELD) || '')
 }
 
 function finish(item: GlideRecord, result: PromoteResult): PromoteResult {
@@ -166,7 +167,7 @@ export function promoteItem(item: GlideRecord): PromoteResult {
     applyPlacement(asset, item)
     asset.setValue('install_date', new GlideDateTime().getValue())
     if (asset.isValidField(SIAF_FIELD)) {
-        const siaf = siafOfModel(model) || type.getValue('siaf')
+        const siaf = siafOfModel(model) || resolveSiaf(type.getValue('siaf'))
         if (siaf) asset.setValue(SIAF_FIELD, siaf)
     }
     // A barcode that matched nothing is a legacy plaqueta: keep its number instead of issuing a new one.
