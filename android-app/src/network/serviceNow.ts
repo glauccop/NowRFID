@@ -10,7 +10,8 @@ import type {
 } from '../types';
 import { base64 } from '../utils/ids';
 
-export const APP_VERSION = '0.1.0';
+// package.json is the single source; Gradle reads the same file for versionName/versionCode.
+export const APP_VERSION: string = require('../../package.json').version;
 
 interface Token {
   accessToken: string;

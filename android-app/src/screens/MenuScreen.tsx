@@ -2,6 +2,7 @@ import { ChevronRight, Settings, Wrench } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { APP_VERSION } from '../network/serviceNow';
 import { useNav } from '../ui/nav';
 import type { StackScreen } from '../ui/nav';
 import { Screen } from '../ui/components';
@@ -50,6 +51,7 @@ export function MenuScreen() {
           <ChevronRight size={22} color={color.textMuted} />
         </Pressable>
       ))}
+      <Text style={styles.version}>NowRFID versão {APP_VERSION}</Text>
     </Screen>
   );
 }
@@ -76,6 +78,21 @@ const styles = StyleSheet.create({
     backgroundColor: color.primarySoft,
   },
   texts: { flex: 1, gap: space.xxs },
-  label: { fontFamily: font.bold, fontSize: fontSize.md2, color: color.textPrimary },
-  hint: { fontFamily: font.regular, fontSize: fontSize.sm, color: color.textMuted },
+  label: {
+    fontFamily: font.bold,
+    fontSize: fontSize.md2,
+    color: color.textPrimary,
+  },
+  version: {
+    marginTop: space.lg2,
+    textAlign: 'center',
+    fontFamily: font.regular,
+    fontSize: fontSize.sm,
+    color: color.textMuted,
+  },
+  hint: {
+    fontFamily: font.regular,
+    fontSize: fontSize.sm,
+    color: color.textMuted,
+  },
 });

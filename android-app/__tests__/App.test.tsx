@@ -62,6 +62,9 @@ test('Horizon shell: four tabs plus gear hub, per-screen title and stacked scree
   // Gear: full-screen hub with stacked Ajustes / Ferramentas buttons, each opening its screen.
   await pressLabel(tree!, 'Ajustes');
   expect(texts(tree!)).toContain('Ajustes e ferramentas');
+  expect(texts(tree!)).toContain(
+    `NowRFID versão ${require('../package.json').version}`,
+  );
   expect(
     tree!.root.findAll(n => n.props.accessibilityRole === 'tab'),
   ).toHaveLength(0);
