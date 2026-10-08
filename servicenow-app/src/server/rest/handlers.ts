@@ -5,6 +5,7 @@ import { getAssetTypes, getStructure } from '../structure-service.ts'
 import { promoteBatch } from '../promote-service.ts'
 import { getDashboard, promoteClassified } from '../dashboard-service.ts'
 import { syncAssetTypes } from '../asset-type-service.ts'
+import { lookupAsset } from '../asset-lookup-service.ts'
 
 export function ping(_request: RESTAPIRequest, response: RESTAPIResponse) {
     response.setStatus(200)
@@ -14,6 +15,17 @@ export function ping(_request: RESTAPIRequest, response: RESTAPIResponse) {
         scope: 'x_snc_nowrfid',
         time: new GlideDateTime().getValue(),
     } as any)
+}
+
+export function lookupAssetHandler(request: RESTAPIRequest, response: RESTAPIResponse) {
+    const q = request.queryParams || {}
+    const result = lookupAsset({
+        epc: firstParam(q.epc),
+        tid: firstParam(q.tid),
+        barcode: firstParam(q.barcode),
+    })
+    response.setStatus(result.status)
+    response.setBody(result.body)
 }
 
 export function postBatch(request: RESTAPIRequest, response: RESTAPIResponse) {

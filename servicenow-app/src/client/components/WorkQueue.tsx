@@ -12,23 +12,33 @@ const STATUS = [
     { id: 'all', label: 'Todos (inclui promovidos)', query: '' },
 ]
 
+export interface QueueFilter {
+    id: string
+    label: string
+    query: string
+    onClear: () => void
+}
+
 interface Props {
     scopeIds: string[]
     scopeLabel: string
+    /** Locations/stockroom scope is built by the parent; extra filters come from O quê / Quando. */
+    scopeQuery: string
+    filters: QueueFilter[]
+    status: string
+    onStatus: (status: string) => void
     onChanged: () => void
 }
 
-export default function WorkQueue({ scopeIds, scopeLabel, onChanged }: Props) {
-    const [status, setStatus] = useState('open')
+export default function WorkQueue({ scopeIds, scopeLabel, scopeQuery, filters, status, onStatus, onChanged }: Props) {
     const [selected, setSelected] = useState<string[]>([])
     const [busy, setBusy] = useState(false)
     const [message, setMessage] = useState<{ status: 'positive' | 'critical' | 'warning'; text: string } | null>(null)
 
     const statusQuery = STATUS.find(s => s.id === status)?.query || ''
-    const scopeQuery = scopeIds.length ? `locationIN${scopeIds.join(',')}` : ''
-    const query = [statusQuery, scopeQuery].filter(Boolean).join('^') + '^ORDERBYDESCsys_created_on'
+    const query = [statusQuery, scopeQuery, ...filters.map(f => f.query)].filter(Boolean).join('^') + '^ORDERBYDESCsys_created_on'
 
-    const onStatus: SelectSelectedItemSet = e => setStatus(String(e.detail.payload.value))
+    const onStatusSet: SelectSelectedItemSet = e => onStatus(String(e.detail.payload.value))
 
     const promote = async () => {
         setBusy(true)
@@ -51,7 +61,7 @@ export default function WorkQueue({ scopeIds, scopeLabel, onChanged }: Props) {
     return (
         <div className="rf-panel">
             <div className="rf-queue__toolbar">
-                <Select label="Situação" items={STATUS} selectedItem={status} onSelectedItemSet={onStatus} size="sm" />
+                <Select label="Situação" items={STATUS} selectedItem={status} onSelectedItemSet={onStatusSet} size="sm" />
                 <span className="rf-queue__scope">Escopo: {scopeLabel}</span>
                 <span className="rf-queue__spacer" />
                 <Button
@@ -62,11 +72,20 @@ export default function WorkQueue({ scopeIds, scopeLabel, onChanged }: Props) {
                     onClicked={promote}
                 />
             </div>
+            {filters.length > 0 && (
+                <div className="rf-filters" aria-label="Filtros ativos">
+                    {filters.map(f => (
+                        <button key={f.id} type="button" className="rf-filters__chip" onClick={f.onClear} title="Remover filtro">
+                            {f.label} <span aria-hidden="true">✕</span>
+                        </button>
+                    ))}
+                </div>
+            )}
             {message && <Alert status={message.status} content={message.text} />}
             <FilteredList
                 table="x_snc_nowrfid_scan_item"
                 title="Fila de trabalho"
-                columns="asset_type,classification_status,capture_type,operation,epc,barcode_value,location,batch,sys_created_on"
+                columns="sys_created_on,asset_type,classification_status,capture_type,operation,epc,barcode_value,location,stockroom,batch"
                 query={query}
                 onSelection={setSelected}
             />

@@ -206,3 +206,22 @@ html, body {
 
 .rf-empty { text-align: center; color: var(--rf-text-3); padding: var(--rf-space-4); font-size: 0.875rem; }
 .rf-footer { text-align: center; font-size: 0.75rem; color: var(--rf-text-3); padding: var(--rf-space-4); }
+
+/* Clickable filters: Onde (almoxarifados), O quê, Quando */
+.rf-stock { margin-top: var(--rf-space-4); border-top: 1px solid var(--rf-border); padding-top: var(--rf-space-3); }
+.rf-stock__title { margin: 0 0 var(--rf-space-2); font-size: 0.8125rem; font-weight: 700; color: var(--rf-text-2); text-transform: uppercase; letter-spacing: 0.04em; }
+.rf-bar--button { width: 100%; padding: var(--rf-space-1) var(--rf-space-2); background: none; border: 0; border-radius: var(--rf-space-2); font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.rf-bar--button:hover { background: rgba(79, 82, 189, 0.08); }
+.rf-bar--button:focus-visible, .rf-chip--button:focus-visible { outline: 2px solid var(--rf-primary); outline-offset: 1px; }
+.rf-bar--selected { background: var(--rf-primary-soft); }
+.rf-bar--selected .rf-bar__label { font-weight: 700; color: inherit; }
+.rf-chip--button { font-family: inherit; color: inherit; cursor: pointer; }
+.rf-chip--button:hover { border-color: var(--rf-primary); }
+.rf-chip--selected { background: var(--rf-primary-soft); border-color: var(--rf-primary); }
+.rf-chart__day { cursor: pointer; outline: none; }
+.rf-chart__day--dim { opacity: 0.4; }
+.rf-chart__day:hover .rf-chart__label, .rf-chart__day:focus-visible .rf-chart__label, .rf-chart__day--selected .rf-chart__label { fill: var(--rf-primary); font-weight: 700; }
+.rf-chart__day:focus-visible .rf-chart__hit { stroke: var(--rf-primary); stroke-width: 2; }
+.rf-filters { display: flex; flex-wrap: wrap; align-items: center; gap: var(--rf-space-2); margin-bottom: var(--rf-space-3); }
+.rf-filters__chip { display: inline-flex; align-items: center; gap: var(--rf-space-2); padding: var(--rf-space-1) var(--rf-space-3); border-radius: 999px; border: 1px solid var(--rf-primary); background: var(--rf-primary-soft); color: inherit; font: inherit; font-size: 0.8125rem; cursor: pointer; }
+.rf-filters__chip:hover { background: transparent; }

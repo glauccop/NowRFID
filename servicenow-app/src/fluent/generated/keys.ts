@@ -33,6 +33,10 @@ declare global {
                         table: 'sys_ws_operation'
                         id: 'fc00d5715a2144a1b8eab9ac5a3a8a37'
                     }
+                    'nowrfid-api-lookup': {
+                        table: 'sys_ws_operation'
+                        id: 'b2736c36769a42848395876739bbf436'
+                    }
                     'nowrfid-api-ping': {
                         table: 'sys_ws_operation'
                         id: '5482d21ca75e4aebb2b0a2e251c57152'
@@ -190,6 +194,10 @@ declare global {
                     package_json: {
                         table: 'sys_module'
                         id: '2cce1c234bc940a79748279875566cd9'
+                    }
+                    'src_server_asset-lookup-service_ts': {
+                        table: 'sys_module'
+                        id: '0f7496ffa7424423a155804a850a773c'
                     }
                     'src_server_asset-tag-service_ts': {
                         table: 'sys_module'

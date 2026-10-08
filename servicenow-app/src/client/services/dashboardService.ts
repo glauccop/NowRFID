@@ -18,6 +18,8 @@ export interface DashboardData {
     root: string
     locations: LocationNode[]
     location_counts: { items: Record<string, number>; pending: Record<string, number>; classified: Record<string, number> }
+    stockrooms: { sys_id: string; name: string; location: string; location_name: string }[]
+    stockroom_counts: { items: Record<string, number>; pending: Record<string, number>; classified: Record<string, number> }
     recent_batches: { sys_id: string; number: string; status: string; item_count: number; location: string; notes: string; created: string }[]
     error_batches: DashboardData['recent_batches']
 }

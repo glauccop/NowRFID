@@ -1,5 +1,5 @@
 import { gs, GlideAggregate, GlideDateTime, GlideRecord } from '@servicenow/glide'
-import { getStructure, glideUtcToIso } from './structure-service.ts'
+import { getStockrooms, getStructure, glideUtcToIso } from './structure-service.ts'
 import { promoteItem } from './promote-service.ts'
 
 const ITEM = 'x_snc_nowrfid_scan_item'
@@ -113,6 +113,10 @@ export function getDashboard(): { status: number; body: any } {
     const pendingByLocation = countBy(ITEM, 'locationISNOTEMPTY^classification_status=pending', ['location'])
     const classifiedByLocation = countBy(ITEM, 'locationISNOTEMPTY^classification_status=classified', ['location'])
 
+    const itemsByStockroom = countBy(ITEM, 'stockroomISNOTEMPTY', ['stockroom'])
+    const pendingByStockroom = countBy(ITEM, 'stockroomISNOTEMPTY^classification_status=pending', ['stockroom'])
+    const classifiedByStockroom = countBy(ITEM, 'stockroomISNOTEMPTY^classification_status=classified', ['stockroom'])
+
     return {
         status: 200,
         body: {
@@ -136,6 +140,8 @@ export function getDashboard(): { status: number; body: any } {
             locations: structure.status === 200 ? structure.body.locations : [],
             root: structure.status === 200 ? structure.body.root : '',
             location_counts: { items: itemsByLocation, pending: pendingByLocation, classified: classifiedByLocation },
+            stockrooms: getStockrooms(),
+            stockroom_counts: { items: itemsByStockroom, pending: pendingByStockroom, classified: classifiedByStockroom },
             recent_batches: recentBatches('', 8),
             error_batches: recentBatches('status=error', 5),
         },

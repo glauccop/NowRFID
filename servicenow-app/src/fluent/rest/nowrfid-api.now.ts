@@ -8,6 +8,7 @@ import {
     getDashboardHandler,
     promoteDashboardHandler,
     syncAssetTypesHandler,
+    lookupAssetHandler,
 } from '../../server/rest/handlers'
 import { restApiAcl, restPromoteAcl } from '../security/acls.now'
 
@@ -92,6 +93,18 @@ RestApi({
             enforceAcl: [restPromoteAcl],
             produces: 'application/json',
             shortDescription: 'Admin: regenerate the Tipos de bem from the model categories with a SIAF account of the discipline',
+        },
+        {
+            $id: Now.ID['nowrfid-api-lookup'],
+            name: 'lookup',
+            method: 'GET',
+            path: '/lookup',
+            script: lookupAssetHandler,
+            authentication: true,
+            authorization: true,
+            enforceAcl: [restApiAcl],
+            produces: 'application/json',
+            shortDescription: 'Find where an asset is registered, by ?epc=, ?tid= (tag registry) or ?barcode= (asset_tag / serial number)',
         },
         {
             $id: Now.ID['nowrfid-api-ping'],
