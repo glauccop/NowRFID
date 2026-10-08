@@ -221,11 +221,14 @@ test('almoxarifado + plaqueta: barcode then tag pairs the patrimônio, stockroom
   await emitTag('E200AAAA');
   expect(textOf(tree!)).not.toContain('E200AAAA');
 
-  Native.scanBarcode.mockResolvedValueOnce({
+  // Reader disconnected in tests: the plaqueta comes from the phone camera.
+  Native.scanCameraCode.mockResolvedValueOnce({
     value: '049567',
-    symbology: 'CODE128',
+    symbology: 'CODE_128',
+    source: 'camera',
   });
-  await press(tree!, 'Ler código');
+  await press(tree!, 'Ler com a câmera');
+  expect(Native.scanCameraCode).toHaveBeenCalledTimes(1);
   expect(textOf(tree!)).toContain('Plaqueta 049567 lida');
 
   await emitTag('E200BBBB');

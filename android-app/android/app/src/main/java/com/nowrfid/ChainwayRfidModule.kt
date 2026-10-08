@@ -7,6 +7,9 @@ import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReadableArray
 import com.facebook.react.bridge.WritableMap
 import com.facebook.fbreact.specs.NativeChainwayRfidSpec
+import com.google.mlkit.vision.barcode.common.Barcode
+import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import com.rscja.deviceapi.RFIDWithUHFBLE
 import com.rscja.deviceapi.entity.BarcodeResult
 import com.rscja.deviceapi.entity.UHFTAGInfo
@@ -374,6 +377,57 @@ class ChainwayRfidModule(context: ReactApplicationContext) : NativeChainwayRfidS
         promise.reject("E_barcode", e.message ?: e.toString(), e)
       }
     }
+  }
+
+  override fun scanCameraCode(promise: Promise) {
+    val activity = reactApplicationContext.currentActivity
+    if (activity == null) {
+      promise.reject("E_camera", "Tela do app indisponível para abrir a câmera")
+      return
+    }
+    debug("tx", "cameraScan", "")
+    val options = GmsBarcodeScannerOptions.Builder()
+      .setBarcodeFormats(Barcode.FORMAT_ALL_FORMATS)
+      .enableAutoZoom()
+      .build()
+    GmsBarcodeScanning.getClient(activity, options).startScan()
+      .addOnSuccessListener { barcode ->
+        val value = barcode.rawValue ?: ""
+        val bytes = barcode.rawBytes ?: value.toByteArray(Charsets.UTF_8)
+        val map = Arguments.createMap()
+        map.putString("value", value)
+        map.putString("hex", bytes.joinToString("") { "%02X".format(it) })
+        map.putInt("ssiId", -1)
+        map.putString("symbology", cameraSymbology(barcode.format))
+        map.putString("source", "camera")
+        debug("rx", "cameraScan", map.toString())
+        promise.resolve(map)
+      }
+      .addOnCanceledListener {
+        debug("rx", "cameraScan", "cancelled")
+        promise.resolve(null)
+      }
+      .addOnFailureListener { e ->
+        debug("err", "cameraScan", e.toString())
+        promise.reject("E_camera", e.message ?: e.toString(), e)
+      }
+  }
+
+  private fun cameraSymbology(format: Int): String = when (format) {
+    Barcode.FORMAT_QR_CODE -> "QR_CODE"
+    Barcode.FORMAT_DATA_MATRIX -> "DATA_MATRIX"
+    Barcode.FORMAT_PDF417 -> "PDF417"
+    Barcode.FORMAT_AZTEC -> "AZTEC"
+    Barcode.FORMAT_CODE_128 -> "CODE_128"
+    Barcode.FORMAT_CODE_39 -> "CODE_39"
+    Barcode.FORMAT_CODE_93 -> "CODE_93"
+    Barcode.FORMAT_CODABAR -> "CODABAR"
+    Barcode.FORMAT_EAN_13 -> "EAN_13"
+    Barcode.FORMAT_EAN_8 -> "EAN_8"
+    Barcode.FORMAT_ITF -> "ITF"
+    Barcode.FORMAT_UPC_A -> "UPC_A"
+    Barcode.FORMAT_UPC_E -> "UPC_E"
+    else -> ""
   }
 
   override fun stopBarcode(promise: Promise) = call("stopScanBarcode", "", promise) { uhf.stopScanBarcode() }

@@ -6,6 +6,7 @@ import React, {
   useState,
 } from 'react';
 import {
+  Camera,
   MapPin,
   Pencil,
   Play,
@@ -138,25 +139,32 @@ export function ScannerView({
     }
   }, [acceptTags]);
 
-  const scanCode = useCallback(async () => {
-    setScanningCode(true);
-    try {
-      const code = await reader.scanBarcode();
-      if (code?.value) {
-        Vibration.vibrate(30);
-        if (pairing) {
-          setPlaqueta(code.value.trim());
-          setMode('rfid');
-        } else {
-          addItems([barcodeToItem(code)]);
+  // R6 imager by default; the phone camera works without the reader.
+  const scanCode = useCallback(
+    async (source: 'reader' | 'camera' = 'reader') => {
+      setScanningCode(true);
+      try {
+        const code =
+          source === 'camera'
+            ? await reader.scanCamera()
+            : await reader.scanBarcode();
+        if (code?.value) {
+          Vibration.vibrate(30);
+          if (pairing) {
+            setPlaqueta(code.value.trim());
+            setMode('rfid');
+          } else {
+            addItems([barcodeToItem(code)]);
+          }
         }
+      } catch (e) {
+        Alert.alert('Código de barras/QR', String(e));
+      } finally {
+        setScanningCode(false);
       }
-    } catch (e) {
-      Alert.alert('Código de barras/QR', String(e));
-    } finally {
-      setScanningCode(false);
-    }
-  }, [addItems, pairing]);
+    },
+    [addItems, pairing],
+  );
 
   useEffect(() => {
     const tags = reader.onTags(acceptTags);
@@ -188,7 +196,7 @@ export function ScannerView({
           inventoryRef.current ? stopInventory() : startInventory();
         }
       } else if (!scanningCode) {
-        scanCode();
+        scanCode('reader');
       }
     });
     return () => sub.remove();
@@ -270,7 +278,9 @@ export function ScannerView({
 
       {!connected && (
         <Text style={s.warning}>
-          Leitor desconectado: toque em "Conectar leitor" no topo.
+          {mode === 'barcode'
+            ? 'Leitor desconectado: use a câmera do celular ou conecte o leitor no topo.'
+            : 'Leitor desconectado: toque em "Conectar leitor" no topo.'}
         </Text>
       )}
 
@@ -290,12 +300,19 @@ export function ScannerView({
             disabled={!connected || inventorying}
             onPress={readSingle}
           />
+        ) : scanningCode ? (
+          <Button
+            title="Cancelar leitura"
+            variant="tertiary"
+            onPress={() => reader.stopBarcode()}
+          />
         ) : (
-          scanningCode && (
+          connected && (
             <Button
-              title="Cancelar leitura"
+              title="Câmera"
+              icon={Camera}
               variant="tertiary"
-              onPress={() => reader.stopBarcode()}
+              onPress={() => scanCode('camera')}
             />
           )
         )}
@@ -333,10 +350,16 @@ export function ScannerView({
         />
       ) : (
         <Fab
-          icon={ScanBarcode}
-          label={scanningCode ? 'Lendo…' : 'Ler código'}
-          disabled={!connected || scanningCode}
-          onPress={scanCode}
+          icon={connected ? ScanBarcode : Camera}
+          label={
+            scanningCode
+              ? 'Lendo…'
+              : connected
+              ? 'Ler código'
+              : 'Ler com a câmera'
+          }
+          disabled={scanningCode}
+          onPress={() => scanCode(connected ? 'reader' : 'camera')}
         />
       )}
     </View>

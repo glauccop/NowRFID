@@ -69,6 +69,8 @@ export interface Spec extends TurboModule {
   factoryReset(): Promise<boolean>;
 
   scanBarcode(): Promise<Object>;
+  /** Phone camera via Google code scanner (no R6 needed); null when cancelled. */
+  scanCameraCode(): Promise<Object>;
   stopBarcode(): Promise<boolean>;
 }
 

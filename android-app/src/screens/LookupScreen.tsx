@@ -1,6 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Text, Vibration, View } from 'react-native';
-import { PackageSearch, ScanBarcode, ScanLine, Search } from 'lucide-react-native';
+import {
+  Camera,
+  PackageSearch,
+  ScanBarcode,
+  ScanLine,
+  Search,
+} from 'lucide-react-native';
 import { reader } from '../reader/chainway';
 import {
   LookupAsset,
@@ -62,45 +68,51 @@ export function LookupScreen() {
     setError('');
   };
 
-  const read = useCallback(async () => {
-    if (readingRef.current) {
-      return;
-    }
-    readingRef.current = true;
-    setReading(true);
-    try {
-      if (mode === 'rfid') {
-        const tag = await reader.inventorySingle();
-        if (tag?.epc) {
-          Vibration.vibrate(30);
-          setScanned({ epc: tag.epc, tid: tag.tid || undefined });
-          setManual('');
-          clearResult();
-        } else {
-          Alert.alert('Leitura RFID', 'Nenhuma tag encontrada.');
-        }
-      } else {
-        const code = await reader.scanBarcode();
-        if (code?.value) {
-          Vibration.vibrate(30);
-          setScanned({ barcode: code.value.trim() });
-          setManual(code.value.trim());
-          clearResult();
-        }
+  const read = useCallback(
+    async (source: 'reader' | 'camera' = 'reader') => {
+      if (readingRef.current) {
+        return;
       }
-    } catch (e) {
-      Alert.alert('Leitura', String(e));
-    } finally {
-      readingRef.current = false;
-      setReading(false);
-    }
-  }, [mode]);
+      readingRef.current = true;
+      setReading(true);
+      try {
+        if (mode === 'rfid') {
+          const tag = await reader.inventorySingle();
+          if (tag?.epc) {
+            Vibration.vibrate(30);
+            setScanned({ epc: tag.epc, tid: tag.tid || undefined });
+            setManual('');
+            clearResult();
+          } else {
+            Alert.alert('Leitura RFID', 'Nenhuma tag encontrada.');
+          }
+        } else {
+          const code =
+            source === 'camera'
+              ? await reader.scanCamera()
+              : await reader.scanBarcode();
+          if (code?.value) {
+            Vibration.vibrate(30);
+            setScanned({ barcode: code.value.trim() });
+            setManual(code.value.trim());
+            clearResult();
+          }
+        }
+      } catch (e) {
+        Alert.alert('Leitura', String(e));
+      } finally {
+        readingRef.current = false;
+        setReading(false);
+      }
+    },
+    [mode],
+  );
 
   // The R6 trigger reads in the active mode.
   useEffect(() => {
     const sub = reader.onTrigger(evt => {
       if (evt.action === 'down') {
-        read();
+        read('reader');
       }
     });
     return () => sub.remove();
@@ -162,11 +174,26 @@ export function LookupScreen() {
           title={mode === 'rfid' ? 'Ler tag' : 'Ler código'}
           icon={mode === 'rfid' ? ScanLine : ScanBarcode}
           variant="secondary"
-          onPress={read}
+          onPress={() => read('reader')}
           busy={reading}
           disabled={!connected}
         />
-        {!connected && <Muted>Conecte o leitor R6 para escanear.</Muted>}
+        {mode === 'barcode' && (
+          <Button
+            title="Ler com a câmera"
+            icon={Camera}
+            variant="secondary"
+            onPress={() => read('camera')}
+            disabled={reading}
+          />
+        )}
+        {!connected && (
+          <Muted>
+            {mode === 'barcode'
+              ? 'Leitor desconectado: use a câmera do celular.'
+              : 'Conecte o leitor R6 para ler etiquetas RFID.'}
+          </Muted>
+        )}
         <Button
           title="Pesquisar"
           icon={Search}
@@ -222,7 +249,9 @@ function AssetCard({
     <Card
       title={asset.name || asset.asset_tag || 'Ativo'}
       icon={PackageSearch}
-      right={asset.status ? <Badge text={asset.status} tone="info" /> : undefined}
+      right={
+        asset.status ? <Badge text={asset.status} tone="info" /> : undefined
+      }
     >
       <Muted>{MATCHED_BY[matchedBy] ?? ''}</Muted>
       <View>

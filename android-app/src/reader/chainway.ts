@@ -50,6 +50,8 @@ export interface BarcodeRead {
   hex: string;
   ssiId: number;
   symbology: string;
+  /** 'camera' when read by the phone camera; absent for the R6 imager. */
+  source?: string;
 }
 
 export interface ReaderInfo {
@@ -173,6 +175,7 @@ export const reader = {
 
   scanBarcode: () => Native.scanBarcode() as Promise<BarcodeRead | null>,
   stopBarcode: () => Native.stopBarcode(),
+  scanCamera: () => Native.scanCameraCode() as Promise<BarcodeRead | null>,
 
   onDeviceFound: (fn: Listener<DeviceFound>) => on(ReaderEvent.deviceFound, fn),
   onConnection: (fn: Listener<ConnectionEvent>) =>
