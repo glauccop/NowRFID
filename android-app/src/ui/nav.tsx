@@ -1,7 +1,7 @@
 import { createContext, useContext } from 'react';
 
 /** Screens pushed on top of the tab bar (Horizon stacked navigation). */
-export type StackScreen = 'connect' | 'debug';
+export type StackScreen = 'connect' | 'debug' | 'menu' | 'settings' | 'tools';
 
 export interface Nav {
   push: (screen: StackScreen) => void;

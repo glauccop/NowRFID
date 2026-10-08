@@ -7,8 +7,8 @@ import {
   type LucideIcon,
   PenLine,
   ScanLine,
+  Search,
   Settings as SettingsIcon,
-  Wrench,
 } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import {
@@ -25,6 +25,8 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { installReaderDebugTap } from './src/reader/chainway';
 import { BatchScreen } from './src/screens/BatchScreen';
 import { ConnectScreen } from './src/screens/ConnectScreen';
+import { MenuScreen } from './src/screens/MenuScreen';
+import { LookupScreen } from './src/screens/LookupScreen';
 import { DebugScreen } from './src/screens/DebugScreen';
 import { ScanScreen } from './src/screens/ScanScreen';
 import { SettingsScreen } from './src/screens/SettingsScreen';
@@ -37,7 +39,7 @@ import { ToastProvider } from './src/ui/toast';
 
 installReaderDebugTap();
 
-type Tab = 'scan' | 'write' | 'batch' | 'tools' | 'settings';
+type Tab = 'scan' | 'write' | 'batch' | 'lookup';
 
 // Horizon: at most five destinations in the navigation bar.
 const TABS: {
@@ -69,18 +71,11 @@ const TABS: {
     Screen: BatchScreen,
   },
   {
-    key: 'tools',
-    label: 'Ferramentas',
-    title: 'Ferramentas de tag',
-    icon: Wrench,
-    Screen: ToolsScreen,
-  },
-  {
-    key: 'settings',
-    label: 'Ajustes',
-    title: 'Ajustes',
-    icon: SettingsIcon,
-    Screen: SettingsScreen,
+    key: 'lookup',
+    label: 'Consultar',
+    title: 'Consultar ativo',
+    icon: Search,
+    Screen: LookupScreen,
   },
 ];
 
@@ -90,6 +85,9 @@ const STACK: Record<
 > = {
   connect: { title: 'Leitor RFID', Screen: ConnectScreen },
   debug: { title: 'Console de debug', Screen: DebugScreen },
+  menu: { title: 'Ajustes e ferramentas', Screen: MenuScreen },
+  settings: { title: 'Ajustes', Screen: SettingsScreen },
+  tools: { title: 'Ferramentas de tag', Screen: ToolsScreen },
 };
 
 function ReaderChip({ onPress }: { onPress: () => void }) {
@@ -234,6 +232,22 @@ function Shell() {
                 </Pressable>
               );
             })}
+            <Pressable
+              onPress={() => nav.push('menu')}
+              accessibilityRole="button"
+              accessibilityLabel="Ajustes"
+              style={styles.tab}
+            >
+              <View style={styles.tabIcon}>
+                <SettingsIcon size={22} color={color.textMuted} />
+              </View>
+              <Text
+                style={[styles.tabText, { color: color.textMuted }]}
+                numberOfLines={1}
+              >
+                Ajustes
+              </Text>
+            </Pressable>
           </View>
         )}
       </SafeAreaView>

@@ -27,7 +27,7 @@ async function pressLabel(
   });
 }
 
-test('Horizon shell: five tabs, per-screen title and stacked reader screen', async () => {
+test('Horizon shell: four tabs plus gear hub, per-screen title and stacked screens', async () => {
   let tree: ReactTestRenderer.ReactTestRenderer | undefined;
   await ReactTestRenderer.act(async () => {
     tree = ReactTestRenderer.create(<App />);
@@ -43,8 +43,7 @@ test('Horizon shell: five tabs, per-screen title and stacked reader screen', asy
     'Escanear',
     'Gravar',
     'Lote',
-    'Ferramentas',
-    'Ajustes',
+    'Consultar',
   ]);
   expect(texts(tree!)).toContain('Escanear bens');
 
@@ -57,6 +56,22 @@ test('Horizon shell: five tabs, per-screen title and stacked reader screen', asy
     tree!.root.findAll(n => n.props.accessibilityRole === 'tab'),
   ).toHaveLength(0);
 
+  await pressLabel(tree!, 'Voltar');
+  expect(texts(tree!)).toContain('Lote atual');
+
+  // Gear: full-screen hub with stacked Ajustes / Ferramentas buttons, each opening its screen.
+  await pressLabel(tree!, 'Ajustes');
+  expect(texts(tree!)).toContain('Ajustes e ferramentas');
+  expect(
+    tree!.root.findAll(n => n.props.accessibilityRole === 'tab'),
+  ).toHaveLength(0);
+  await pressLabel(tree!, 'Ferramentas');
+  expect(texts(tree!)).toContain('Ferramentas de tag');
+  await pressLabel(tree!, 'Voltar');
+  expect(texts(tree!)).toContain('Ajustes e ferramentas');
+  await pressLabel(tree!, 'Ajustes');
+  expect(texts(tree!)).toContain('Ajustes');
+  await pressLabel(tree!, 'Voltar');
   await pressLabel(tree!, 'Voltar');
   expect(texts(tree!)).toContain('Lote atual');
 

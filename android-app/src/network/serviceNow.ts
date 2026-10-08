@@ -278,6 +278,36 @@ export interface AssetTypesResult {
   types: AssetType[];
 }
 
+export interface LookupAsset {
+  sys_id: string;
+  asset_tag: string;
+  name: string;
+  class: string;
+  model: string;
+  category: string;
+  serial_number: string;
+  status: string;
+  location: string;
+  location_path: string;
+  stockroom: string;
+  assigned_to: string;
+  tag_status?: string;
+}
+
+export interface LookupResult {
+  found: boolean;
+  matched_by: 'tag_epc' | 'tag_tid' | 'asset_tag' | '';
+  assets: LookupAsset[];
+  /** Captured by NowRFID but no asset exists yet. */
+  staging: {
+    batch: string;
+    classification: string;
+    location: string;
+    asset_type: string;
+    captured_at: string;
+  } | null;
+}
+
 export const serviceNow = {
   ping: (settings: Settings) => api<PingResult>(settings, 'GET', '/ping'),
 
@@ -290,6 +320,17 @@ export const serviceNow = {
 
   getAssetTypes: (settings: Settings) =>
     api<AssetTypesResult>(settings, 'GET', '/asset-types'),
+
+  lookupAsset: (
+    settings: Settings,
+    query: { epc?: string; tid?: string; barcode?: string },
+  ) => {
+    const qs = Object.entries(query)
+      .filter(([, v]) => !!v)
+      .map(([k, v]) => `${k}=${encodeURIComponent(v as string)}`)
+      .join('&');
+    return api<LookupResult>(settings, 'GET', `/lookup?${qs}`);
+  },
 
   sendBatch: (
     settings: Settings,
