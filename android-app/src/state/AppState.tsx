@@ -103,13 +103,15 @@ function normalizeReaderInfo(info: ReaderInfo): ReaderInfo {
 async function setupAfterConnect(
   isCancelled: () => boolean,
   includeTid: boolean,
+  power: number,
   onInfo: (info: ReaderInfo) => void,
 ) {
   let modeOk = false;
+  let powerOk = false;
   let infoOk = false;
   for (
     let attempt = 1;
-    attempt <= POST_CONNECT_ATTEMPTS && !(modeOk && infoOk);
+    attempt <= POST_CONNECT_ATTEMPTS && !(modeOk && powerOk && infoOk);
     attempt++
   ) {
     await sleep(POST_CONNECT_DELAY_MS * attempt);
@@ -119,6 +121,9 @@ async function setupAfterConnect(
     if (!modeOk) {
       modeOk = await reader.setInventoryMode(includeTid).catch(() => false);
     }
+    if (!powerOk) {
+      powerOk = await reader.setPower(power).catch(() => false);
+    }
     if (!infoOk) {
       const info = normalizeReaderInfo(
         await reader.getReaderInfo().catch(() => ({})),
@@ -127,9 +132,10 @@ async function setupAfterConnect(
       onInfo(info);
     }
   }
-  if (!modeOk || !infoOk) {
+  if (!modeOk || !powerOk || !infoOk) {
     debugLog.log('app', 'err', 'Configuração pós-conexão incompleta', {
       inventoryModeApplied: modeOk,
+      powerApplied: powerOk,
       readerInfoRead: infoOk,
     });
   }
@@ -366,6 +372,8 @@ interface AppContextValue extends State {
   newBatch: () => void;
   sendBatch: () => Promise<SendSummary>;
   refreshReaderInfo: () => Promise<void>;
+  /** Saves the read power and applies it to the R6 when connected; false if the reader refused. */
+  setReadPower: (dbm: number) => Promise<boolean>;
   syncStructure: (full?: boolean) => Promise<void>;
   setCaptureContext: (context: CaptureContext | null) => void;
 }
@@ -471,6 +479,7 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
         setupAfterConnect(
           () => cancelled,
           stateRef.current.settings.includeTid,
+          stateRef.current.settings.readPower,
           info => dispatch({ type: 'readerInfo', info }),
         );
       } else {
@@ -481,6 +490,19 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       cancelled = true;
       sub.remove();
     };
+  }, []);
+
+  const setReadPower = useCallback(async (dbm: number) => {
+    dispatch({ type: 'settings', patch: { readPower: dbm } });
+    if (stateRef.current.connection.status !== 'connected') {
+      return true;
+    }
+    const ok = await reader.setPower(dbm).catch(() => false);
+    dispatch({ type: 'readerInfo', info: ok ? { power: dbm } : {} });
+    if (!ok) {
+      debugLog.log('app', 'err', 'setPower recusado', { dbm });
+    }
+    return ok;
   }, []);
 
   const sendBatch = useCallback(async () => {
@@ -583,9 +605,10 @@ export function AppStateProvider({ children }: { children: React.ReactNode }) {
       ...actions,
       sendBatch,
       refreshReaderInfo,
+      setReadPower,
       syncStructure,
     }),
-    [state, actions, sendBatch, refreshReaderInfo, syncStructure],
+    [state, actions, sendBatch, refreshReaderInfo, setReadPower, syncStructure],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

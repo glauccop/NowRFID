@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 import {
   Bank,
@@ -23,6 +23,8 @@ import {
   Toggle,
 } from '../ui/components';
 import { isHex, validateEpc, validatePassword } from '../utils/ids';
+import { LocatePanel } from './LocatePanel';
+import { PowerPicker } from './PowerPicker';
 
 type Tool = 'memory' | 'lock' | 'kill' | 'locate' | 'config';
 
@@ -406,35 +408,6 @@ function KillTool({ connected }: { connected: boolean }) {
 
 function LocateTool({ connected }: { connected: boolean }) {
   const [epc, setEpc] = useState('');
-  const [active, setActive] = useState(false);
-  const [value, setValue] = useState(0);
-
-  useEffect(() => {
-    const sub = reader.onLocate(evt => evt.valid && setValue(evt.value));
-    return () => {
-      sub.remove();
-      reader.stopLocate().catch(() => undefined);
-    };
-  }, []);
-
-  const toggle = async () => {
-    if (active) {
-      await reader.stopLocate().catch(() => undefined);
-      setActive(false);
-      return;
-    }
-    const problem = validateEpc(epc);
-    if (problem) {
-      return Alert.alert('Localizar', problem);
-    }
-    setValue(0);
-    if (await reader.startLocate(epc).catch(() => false)) {
-      setActive(true);
-    } else {
-      Alert.alert('Localizar', 'O leitor não iniciou a localização.');
-    }
-  };
-
   return (
     <Card title="Localizar tag (detector de proximidade)">
       <Field
@@ -443,48 +416,18 @@ function LocateTool({ connected }: { connected: boolean }) {
         onChangeText={t => setEpc(t.replace(/\s/g, '').toUpperCase())}
         autoCapitalize="characters"
       />
-      <Button
-        title={active ? 'Parar' : 'Iniciar busca'}
-        variant={active ? 'danger' : 'primary'}
-        disabled={!connected}
-        onPress={toggle}
-      />
-      <View
-        style={{
-          height: 22,
-          backgroundColor: '#E7ECF3',
-          borderRadius: 11,
-          overflow: 'hidden',
-        }}
-      >
-        <View
-          style={{
-            width: `${value}%`,
-            height: '100%',
-            backgroundColor:
-              value > 70
-                ? colors.success
-                : value > 35
-                ? colors.warning
-                : colors.primary,
-          }}
-        />
-      </View>
-      <Muted>Proximidade: {value}/100 — quanto maior, mais perto.</Muted>
+      <Muted>
+        Sabe só o número do patrimônio? Use Consultar e toque em Localizar no
+        resultado.
+      </Muted>
+      <LocatePanel epc={epc} connected={connected} />
     </Card>
   );
 }
 
 function ConfigTool({ connected }: { connected: boolean }) {
   const { settings, updateSettings, readerInfo, refreshReaderInfo } = useApp();
-  const [power, setPower] = useState(readerInfo.power ?? 30);
   const [beep, setBeep] = useState(true);
-
-  useEffect(() => {
-    if (readerInfo.power !== undefined) {
-      setPower(readerInfo.power);
-    }
-  }, [readerInfo.power]);
 
   const apply = async (label: string, action: () => Promise<boolean>) => {
     try {
@@ -498,29 +441,13 @@ function ConfigTool({ connected }: { connected: boolean }) {
 
   return (
     <>
-      <Card title="Potência de saída">
-        <View style={styles.row}>
-          <Button
-            title="−"
-            variant="secondary"
-            onPress={() => setPower(p => Math.max(5, p - 1))}
-          />
-          <Text style={[styles.cardTitle, { fontSize: 22 }]}>{power} dBm</Text>
-          <Button
-            title="+"
-            variant="secondary"
-            onPress={() => setPower(p => Math.min(30, p + 1))}
-          />
-        </View>
+      <Card title="Potência de leitura">
+        <PowerPicker fine />
         <Muted>
-          5–30 dBm. Menos potência = leitura mais seletiva (útil para gravar uma
-          tag entre várias).
+          5–30 dBm. Menos potência = leitura mais seletiva (evita tags do cômodo
+          ao lado e ajuda a gravar uma tag entre várias). A escolha fica salva e
+          vale também na tela Escanear.
         </Muted>
-        <Button
-          title="Aplicar potência"
-          disabled={!connected}
-          onPress={() => apply('Potência', () => reader.setPower(power))}
-        />
       </Card>
 
       <Card

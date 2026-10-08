@@ -19,6 +19,17 @@ function locationPath(sysId: string): string {
     return loc.getValue('full_name') || loc.getDisplayValue('name') || ''
 }
 
+/** EPC of the asset's tag, active ones first: lets the app locate the asset with the reader. */
+function assetEpc(assetId: string): string {
+    const tag = new GlideRecord('x_snc_nowrfid_tag')
+    tag.addQuery('asset', assetId)
+    tag.addQuery('status', 'active')
+    tag.orderByDesc('sys_updated_on')
+    tag.setLimit(1)
+    tag.query()
+    return tag.next() ? tag.getValue('epc') || '' : ''
+}
+
 function describeAsset(asset: GlideRecord) {
     const locationId = asset.getValue('location') || ''
     return {
@@ -34,6 +45,7 @@ function describeAsset(asset: GlideRecord) {
         location_path: locationPath(locationId),
         stockroom: asset.getDisplayValue('stockroom'),
         assigned_to: asset.getDisplayValue('assigned_to'),
+        epc: assetEpc(asset.getUniqueValue()),
     }
 }
 

@@ -1,6 +1,9 @@
 package com.nowrfid
 
 import android.bluetooth.BluetoothDevice
+import android.media.AudioAttributes
+import android.media.AudioFormat
+import android.media.AudioTrack
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
@@ -48,6 +51,7 @@ class ChainwayRfidModule(context: ReactApplicationContext) : NativeChainwayRfidS
   private val uhf: RFIDWithUHFBLE = RFIDWithUHFBLE.getInstance()
   private val commands = Executors.newSingleThreadExecutor()
   private val barcodeWorker = Executors.newSingleThreadExecutor()
+  private val toneWorker = Executors.newSingleThreadExecutor()
   private val scheduler = Executors.newSingleThreadScheduledExecutor()
   private val pendingTags = ConcurrentLinkedQueue<UHFTAGInfo>()
   private var flushTask: ScheduledFuture<*>? = null
@@ -432,6 +436,48 @@ class ChainwayRfidModule(context: ReactApplicationContext) : NativeChainwayRfidS
 
   override fun stopBarcode(promise: Promise) = call("stopScanBarcode", "", promise) { uhf.stopScanBarcode() }
 
+  // ---------- phone speaker tone (proximity beeper for the locate screen) ----------
+
+  /** Short sine beep on the phone speaker; frequency in Hz, duration in ms. Fire-and-forget. */
+  override fun playTone(frequency: Double, durationMs: Double) {
+    toneWorker.execute {
+      runCatching {
+        val rate = 22050
+        val samples = (rate * durationMs.coerceIn(10.0, 1000.0) / 1000).toInt()
+        val fade = minOf(samples / 4, rate / 200)
+        val pcm = ShortArray(samples) { i ->
+          val envelope = when {
+            i < fade -> i.toDouble() / fade
+            i > samples - fade -> (samples - i).toDouble() / fade
+            else -> 1.0
+          }
+          (Math.sin(2 * Math.PI * frequency * i / rate) * envelope * Short.MAX_VALUE * 0.8).toInt().toShort()
+        }
+        val track = AudioTrack.Builder()
+          .setAudioAttributes(
+            AudioAttributes.Builder()
+              .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+              .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+              .build(),
+          )
+          .setAudioFormat(
+            AudioFormat.Builder()
+              .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+              .setSampleRate(rate)
+              .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+              .build(),
+          )
+          .setTransferMode(AudioTrack.MODE_STATIC)
+          .setBufferSizeInBytes(samples * 2)
+          .build()
+        track.write(pcm, 0, samples)
+        track.play()
+        Thread.sleep(durationMs.toLong() + 20)
+        track.release()
+      }
+    }
+  }
+
   override fun invalidate() {
     stopFlushing()
     runCatching { uhf.stopInventory() }
@@ -439,6 +485,7 @@ class ChainwayRfidModule(context: ReactApplicationContext) : NativeChainwayRfidS
     runCatching { uhf.free() }
     commands.shutdownNow()
     barcodeWorker.shutdownNow()
+    toneWorker.shutdownNow()
     scheduler.shutdownNow()
     super.invalidate()
   }

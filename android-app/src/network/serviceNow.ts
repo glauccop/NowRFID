@@ -292,6 +292,8 @@ export interface LookupAsset {
   location_path: string;
   stockroom: string;
   assigned_to: string;
+  /** EPC of the asset's active RFID tag (empty when it has none); used to locate it. */
+  epc?: string;
   tag_status?: string;
 }
 

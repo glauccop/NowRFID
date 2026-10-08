@@ -72,6 +72,8 @@ export interface Spec extends TurboModule {
   /** Phone camera via Google code scanner (no R6 needed); null when cancelled. */
   scanCameraCode(): Promise<Object>;
   stopBarcode(): Promise<boolean>;
+  /** Short beep on the phone speaker (proximity feedback while locating). */
+  playTone(frequency: number, durationMs: number): void;
 }
 
 export default TurboModuleRegistry.getEnforcing<Spec>('ChainwayRfid');

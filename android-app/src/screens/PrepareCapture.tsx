@@ -2,6 +2,7 @@ import {
   Boxes,
   Database,
   MapPin,
+  Radio,
   RefreshCw,
   ScanLine,
   Shapes,
@@ -19,6 +20,7 @@ import {
   typeLabel,
 } from '../structure/tree';
 import type { CaptureMode } from '../types';
+import { PowerPicker } from './PowerPicker';
 import {
   Badge,
   Button,
@@ -339,6 +341,12 @@ export function PrepareCapture({ onStart }: { onStart: () => void }) {
               ? 'O ServiceNow gera o número de patrimônio ao criar o ativo; o app mostra o número depois do envio.'
               : 'Leia o código de barras da plaqueta e, em seguida, a tag RFID do bem: o app vincula a tag ao patrimônio existente.'}
           </Muted>
+        </Card>
+      )}
+
+      {structure && (
+        <Card title="4. Alcance da leitura RFID" icon={Radio}>
+          <PowerPicker />
         </Card>
       )}
 

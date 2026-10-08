@@ -10,6 +10,7 @@ import {
   MapPin,
   Pencil,
   Play,
+  Radio,
   ScanBarcode,
   ScanLine,
   Square,
@@ -30,6 +31,7 @@ import { Button, EmptyState, Fab, Segmented } from '../ui/components';
 import { color, font, fontSize, palette, space } from '../ui/theme';
 import { ItemRow } from './ItemRow';
 import { PrepareCapture } from './PrepareCapture';
+import { POWER_PRESETS } from '../reader/proximity';
 
 type Mode = 'rfid' | 'barcode';
 
@@ -48,7 +50,9 @@ export function ScannerView({
 }: {
   onChangeSelection: () => void;
 }) {
-  const { connection, batch, addItems, captureContext, assetTypes } = useApp();
+  const { connection, batch, addItems, captureContext, assetTypes, settings } =
+    useApp();
+  const powerPreset = POWER_PRESETS.find(p => p.dbm === settings.readPower);
   const pairing = captureContext?.mode === 'existing';
   // Pairing starts with the plaqueta: read its barcode, then the tag of the same item.
   const [mode, setMode] = useState<Mode>(pairing ? 'barcode' : 'rfid');
@@ -251,6 +255,13 @@ export function ScannerView({
             <Tag size={16} color={palette.primary1} />
             <Text style={s.summaryType}>
               {type ? `${type.icon} ${type.name}` : '❔ Classificar depois'}
+            </Text>
+          </View>
+          <View style={s.line}>
+            <Radio size={16} color={palette.primary1} />
+            <Text style={s.summaryType}>
+              Alcance {powerPreset ? powerPreset.label : 'personalizado'} ·{' '}
+              {settings.readPower} dBm
             </Text>
           </View>
           <Text style={s.summaryCount}>

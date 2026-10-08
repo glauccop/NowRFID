@@ -59,6 +59,8 @@ export interface Settings {
   clientSecret: string;
   debugEnabled: boolean;
   includeTid: boolean;
+  /** R6 output power in dBm (5–30), saved and re-applied on every connect. */
+  readPower: number;
   lastDeviceAddress: string;
   lastDeviceName: string;
   installId: string;
@@ -74,6 +76,7 @@ export const DEFAULT_SETTINGS: Settings = {
   clientSecret: '',
   debugEnabled: true,
   includeTid: true,
+  readPower: 30,
   lastDeviceAddress: '',
   lastDeviceName: '',
   installId: '',

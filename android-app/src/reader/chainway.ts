@@ -176,6 +176,8 @@ export const reader = {
   scanBarcode: () => Native.scanBarcode() as Promise<BarcodeRead | null>,
   stopBarcode: () => Native.stopBarcode(),
   scanCamera: () => Native.scanCameraCode() as Promise<BarcodeRead | null>,
+  playTone: (frequency: number, durationMs: number) =>
+    Native.playTone(frequency, durationMs),
 
   onDeviceFound: (fn: Listener<DeviceFound>) => on(ReaderEvent.deviceFound, fn),
   onConnection: (fn: Listener<ConnectionEvent>) =>

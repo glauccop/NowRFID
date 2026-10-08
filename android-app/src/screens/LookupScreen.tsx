@@ -3,6 +3,7 @@ import { Alert, Text, Vibration, View } from 'react-native';
 import {
   Camera,
   PackageSearch,
+  Radar,
   ScanBarcode,
   ScanLine,
   Search,
@@ -28,6 +29,7 @@ import {
   styles,
 } from '../ui/components';
 import { color } from '../ui/theme';
+import { LocatePanel } from './LocatePanel';
 
 type Mode = 'rfid' | 'barcode';
 
@@ -153,7 +155,7 @@ export function LookupScreen() {
         />
         {mode === 'barcode' && (
           <Field
-            label="Código (leia ou digite)"
+            label="Código ou número do patrimônio (leia ou digite)"
             value={manual}
             onChangeText={t => {
               setManual(t);
@@ -211,7 +213,14 @@ export function LookupScreen() {
 
       {result?.found &&
         result.assets.map(a => (
-          <AssetCard key={a.sys_id} asset={a} matchedBy={result.matched_by} />
+          <AssetCard
+            key={a.sys_id}
+            asset={a}
+            matchedBy={result.matched_by}
+            // Found by RFID: the tag just read is the one to look for.
+            epc={a.epc || (result.matched_by === 'tag_epc' ? query.epc : '')}
+            connected={connected}
+          />
         ))}
 
       {result && !result.found && (
@@ -241,10 +250,15 @@ export function LookupScreen() {
 function AssetCard({
   asset,
   matchedBy,
+  epc,
+  connected,
 }: {
   asset: LookupAsset;
   matchedBy: string;
+  epc?: string;
+  connected: boolean;
 }) {
+  const [locating, setLocating] = useState(false);
   return (
     <Card
       title={asset.name || asset.asset_tag || 'Ativo'}
@@ -265,7 +279,25 @@ function AssetCard({
         <KeyValue k="Série" v={asset.serial_number} />
         <KeyValue k="Responsável" v={asset.assigned_to} />
         <KeyValue k="Tabela" v={asset.class} />
+        {epc ? <KeyValue k="Etiqueta RFID" v={epc} /> : null}
       </View>
+      {epc ? (
+        locating ? (
+          <LocatePanel epc={epc} connected={connected} />
+        ) : (
+          <Button
+            title="Localizar"
+            icon={Radar}
+            variant="secondary"
+            onPress={() => setLocating(true)}
+          />
+        )
+      ) : (
+        <Muted>
+          Sem etiqueta RFID vinculada: não é possível localizar este ativo pelo
+          leitor.
+        </Muted>
+      )}
     </Card>
   );
 }
